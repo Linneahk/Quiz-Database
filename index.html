@@ -1,14 +1,69 @@
-<html lang="en">
+<!DOCTYPE html>
+<html lang="no">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuizApp – Logg inn</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700;900&family=Epilogue:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
-    
 
-<script type="module" src="js/app.js"></script>
-<script type="module" src="js/supabaseClient.js"></script>
+<div class="card">
+
+  <div class="logo">QuizApp</div>
+  <div class="tagline">Administrer klassar og spørsmål</div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab(event, 'login')">Logg inn</button>
+    <button class="tab" onclick="switchTab(event, 'register')">Registrer</button>
+  </div>
+
+  <div class="msg" id="msg"></div>
+
+  <!-- LOGIN -->
+  <div id="loginForm">
+    <div class="form">
+      <div class="field">
+        <label for="loginEmail">E-post</label>
+        <input type="email" id="loginEmail" placeholder="kari@skule.no" />
+      </div>
+      <div class="field">
+        <label for="loginPassword">Passord</label>
+        <input type="password" id="loginPassword" placeholder="••••••••" />
+      </div>
+      <button class="btn" id="loginBtn" onclick="login()">Logg inn</button>
+      <div class="forgot" onclick="forgotPassword()">Gløymt passord?</div>
+    </div>
+  </div>
+
+  <!-- REGISTRER -->
+  <div id="registerForm" style="display:none;">
+    <div class="form">
+      <div class="field">
+        <label for="regName">Fullt namn</label>
+        <input type="text" id="regName" placeholder="Kari Lærar" />
+      </div>
+      <div class="field">
+        <label for="regEmail">E-post</label>
+        <input type="email" id="regEmail" placeholder="kari@skule.no" />
+      </div>
+      <div class="field">
+        <label for="regPassword">Passord</label>
+        <input type="password" id="regPassword" placeholder="Minst 6 teikn" />
+      </div>
+      <div class="field">
+        <label for="regPassword2">Bekreft passord</label>
+        <input type="password" id="regPassword2" placeholder="••••••••" />
+      </div>
+      <button class="btn" id="registerBtn" onclick="register()">Opprett konto</button>
+    </div>
+  </div>
+
+</div>
+
+<script src="js/app.js"></script>
 
 </body>
 </html>
