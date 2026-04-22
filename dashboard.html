@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QuizApp – Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,900;1,700&family=Epilogue:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/dashboard.css">
+</head>
+<body class="dashboard-body">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-logo">QuizApp</div>
+    <div class="topbar-right">
+      <div class="user-chip">
+        <div class="user-avatar" id="userInitial">?</div>
+        <span id="userEmail">…</span>
+      </div>
+      <button class="logout-btn" onclick="logout()">Logg ut</button>
+    </div>
+  </header>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <div class="page-header">
+      <div>
+        <div class="page-title">Mine <span>quizzar</span></div>
+        <div class="page-subtitle">Opprett og administrer rebusløp og spørsmålsrunder</div>
+      </div>
+      <button class="btn-create" onclick="openModal()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+        </svg>
+        Ny quiz
+      </button>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-label">Totalt</div>
+        <div class="stat-value" id="statTotal">–</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Aktive</div>
+        <div class="stat-value" id="statActive">–</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Kladdar</div>
+        <div class="stat-value" id="statDraft">–</div>
+      </div>
+    </div>
+
+    <div class="section-header">
+      <div class="section-title">Alle quizzar</div>
+      <input class="search-input" type="search" placeholder="Søk…" oninput="filterQuizzes(this.value)" />
+    </div>
+
+    <div class="quiz-grid" id="quizGrid">
+      <div class="loading-row"><div class="spinner"></div></div>
+    </div>
+
+  </main>
+
+  <!-- MODAL -->
+  <div class="modal-overlay" id="modalOverlay" onclick="closeModalIfBg(event)">
+    <div class="modal">
+      <div class="modal-title">Ny quiz</div>
+      <div class="modal-desc">Gje quizen eit namn og eit ikon – du legg til spørsmål etterpå.</div>
+      <div class="modal-form">
+        <div class="modal-field">
+          <label>Namn</label>
+          <input type="text" id="newName" placeholder="t.d. Norgesgeografi 6B" maxlength="60" />
+        </div>
+        <div class="modal-field">
+          <label>Ikon</label>
+          <div class="emoji-grid" id="emojiGrid"></div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn-cancel" onclick="closeModal()">Avbryt</button>
+          <button class="btn-submit" id="submitBtn" onclick="createQuiz()">Opprett quiz</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+
+  <script src="js/dashboard.js"></script>
+</body>
+</html>
