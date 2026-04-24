@@ -1,27 +1,20 @@
-const SUPABASE_URL = 'https://owgldsfxpmzpkipgeksr.supabase.co'
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93Z2xkc2Z4cG16cGtpcGdla3NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4MDM2NTYsImV4cCI6MjA5MjM3OTY1Nn0.bD5dNHcQfjjq29DprTnVafxuZeCvt30zu0qQItq6AXY'
+import { supabase as db } from './supabaseClient.js'
 
-const { createClient } = supabase
-const db = createClient(SUPABASE_URL, SUPABASE_KEY)
-
-// ── Tab-bytte ──
-function switchTab(e, tab) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'))
-  e.target.classList.add('active')
-  document.getElementById('loginForm').style.display    = tab === 'login'    ? 'block' : 'none'
-  document.getElementById('registerForm').style.display = tab === 'register' ? 'block' : 'none'
-  clearMsg()
-}
+// ── GJØR FUNKSJONENE TILGJENGELIGE FOR HTML ──
+window.login = login;
+window.forgotPassword = forgotPassword;
 
 // ── Meldingar ──
 function showMsg(text, type) {
   const el = document.getElementById('msg')
+  if (!el) return
   el.textContent = text
   el.className = 'msg ' + type
 }
 
 function clearMsg() {
   const el = document.getElementById('msg')
+  if (!el) return
   el.className = 'msg'
   el.textContent = ''
 }
@@ -29,10 +22,11 @@ function clearMsg() {
 // ── Loading-tilstand ──
 function setLoading(btnId, loading) {
   const btn = document.getElementById(btnId)
+  if (!btn) return
   btn.disabled = loading
   btn.innerHTML = loading
     ? '<span class="spinner"></span>Ventar...'
-    : btnId === 'loginBtn' ? 'Logg inn' : 'Opprett konto'
+    : 'Logg inn'
 }
 
 // ── LOGIN ──
@@ -57,48 +51,10 @@ async function login() {
   }
 }
 
-// ── REGISTRER ──
-async function register() {
-  const name      = document.getElementById('regName').value.trim()
-  const email     = document.getElementById('regEmail').value.trim()
-  const password  = document.getElementById('regPassword').value
-  const password2 = document.getElementById('regPassword2').value
-
-  if (!name || !email || !password)
-    return showMsg('Fyll inn alle felt.', 'error')
-  if (password.length < 6)
-    return showMsg('Passord må vere minst 6 teikn.', 'error')
-  if (password !== password2)
-    return showMsg('Passorda er ikkje like.', 'error')
-
-  setLoading('registerBtn', true)
-  clearMsg()
-
-  const { data, error } = await db.auth.signUp({ email, password })
-
-  if (error) {
-    setLoading('registerBtn', false)
-    return showMsg(error.message, 'error')
-  }
-
-  const userId = data.user?.id
-  if (userId) {
-    await db.from('teachers').insert({
-      id:         userId,
-      full_name:  name,
-      email:      email,
-      created_at: new Date().toISOString()
-    })
-  }
-
-  setLoading('registerBtn', false)
-  showMsg('✅ Konto oppretta! Sjekk e-posten din for å bekrefte.', 'success')
-}
-
 // ── GLØYMT PASSORD ──
 async function forgotPassword() {
   const email = document.getElementById('loginEmail').value.trim()
-  if (!email) return showMsg('Skriv inn e-postadressa di fyrst.', 'error')
+  if (!email) return showMsg('Skriv inn e-postadressa di fyrst i feltet over.', 'error')
 
   const { error } = await db.auth.resetPasswordForEmail(email)
   if (error) {
@@ -110,13 +66,13 @@ async function forgotPassword() {
 
 // ── Allereie innlogga? ──
 db.auth.getSession().then(({ data }) => {
-  if (data.session) window.location.href = 'dashboard.html'
+  if (data.session) {
+      console.log("Bruker er allerede innlogget!");
+      // window.location.href = 'dashboard.html' 
+  }
 })
 
 // ── Enter-tast ──
 document.addEventListener('keydown', e => {
-  if (e.key !== 'Enter') return
-  const loginVisible = document.getElementById('loginForm').style.display !== 'none'
-  if (loginVisible) login()
-  else register()
+  if (e.key === 'Enter') login()
 })
