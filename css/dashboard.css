@@ -30,7 +30,7 @@ body.dashboard-body {
 .topbar-right {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 16px;
 }
 
 .user-chip {
@@ -87,7 +87,7 @@ body.dashboard-body {
 .main {
   max-width: 960px;
   margin: 0 auto;
-  padding: 40px 24px 80px;
+  padding: 48px 24px 80px;
   animation: fadeUp 0.3s ease;
 }
 
@@ -96,7 +96,7 @@ body.dashboard-body {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-  margin-bottom: 32px;
+  margin-bottom: 40px;
   gap: 16px;
   flex-wrap: wrap;
 }
@@ -140,8 +140,8 @@ body.dashboard-body {
 .stats-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 12px;
-  margin-bottom: 32px;
+  gap: 16px;
+  margin-bottom: 40px;
 }
 
 .stat-card {
@@ -203,7 +203,7 @@ body.dashboard-body {
 .quiz-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 14px;
+  gap: 16px;
 }
 
 /* ── QUIZ CARD ── */
@@ -211,10 +211,10 @@ body.dashboard-body {
   background: var(--card);
   border: 1.5px solid var(--border);
   border-radius: 14px;
-  padding: 22px;
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 16px;
   cursor: pointer;
   transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
   text-decoration: none;
@@ -268,7 +268,7 @@ body.dashboard-body {
   border-top: 1px solid var(--border);
 }
 
-.quiz-stats { display: flex; gap: 12px; }
+.quiz-stats { display: flex; gap: 14px; }
 
 .quiz-stat {
   display: flex;
@@ -319,9 +319,9 @@ body.dashboard-body {
   backdrop-filter: blur(3px);
   z-index: 200;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: center;
-  padding: 0;
+  padding: 16px;
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s;
@@ -331,25 +331,14 @@ body.dashboard-body {
 .modal {
   background: var(--card);
   border: 1.5px solid var(--border);
-  border-radius: 20px 20px 0 0;
-  padding: 28px 24px 40px;
+  border-radius: 16px;
+  padding: 36px 28px;
   width: 100%;
-  max-width: 100%;
-  transform: translateY(100%);
-  transition: transform 0.3s cubic-bezier(0.32, 0.72, 0, 1);
+  max-width: 400px;
+  transform: translateY(16px);
+  transition: transform 0.2s;
 }
 .modal-overlay.open .modal { transform: translateY(0); }
-
-/* Dra-indikator på mobil */
-.modal::before {
-  content: '';
-  display: block;
-  width: 36px;
-  height: 4px;
-  background: var(--border);
-  border-radius: 99px;
-  margin: 0 auto 24px;
-}
 
 .modal-title {
   font-family: 'Fraunces', serif;
@@ -380,12 +369,12 @@ body.dashboard-body {
 .emoji-grid { display: flex; flex-wrap: wrap; gap: 8px; }
 
 .emoji-btn {
-  width: 42px;
-  height: 42px;
+  width: 38px;
+  height: 38px;
   border: 1.5px solid var(--border);
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--bg);
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -400,12 +389,12 @@ body.dashboard-body {
 
 .btn-cancel {
   flex: 1;
-  padding: 13px;
+  padding: 11px;
   border: 1.5px solid var(--border);
-  border-radius: 10px;
+  border-radius: 8px;
   background: transparent;
   font-family: 'Epilogue', sans-serif;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 500;
   color: var(--muted);
   cursor: pointer;
@@ -415,13 +404,13 @@ body.dashboard-body {
 
 .btn-submit {
   flex: 2;
-  padding: 13px;
+  padding: 11px;
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   background: var(--ink);
   color: white;
   font-family: 'Fraunces', serif;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 700;
   cursor: pointer;
   transition: opacity 0.15s;
