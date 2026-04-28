@@ -16,6 +16,24 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 .topbar-logo { font-family: 'Fraunces', serif; font-weight: 900; font-size: 1.3rem; letter-spacing: -0.5px; color: var(--ink); }
 .topbar-right { display: flex; align-items: center; gap: 10px; }
 
+/* QR skann-knapp i topbar */
+.qr-scan-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 13px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-family: 'Epilogue', sans-serif;
+  font-size: 0.78rem;
+  font-weight: 500;
+  color: var(--muted);
+  text-decoration: none;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.qr-scan-btn:hover { border-color: var(--ink); color: var(--ink); }
+
 .user-chip {
   display: flex;
   align-items: center;
@@ -31,8 +49,7 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 .user-chip span { max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .user-avatar {
-  width: 26px;
-  height: 26px;
+  width: 26px; height: 26px;
   border-radius: 50%;
   background: var(--ink);
   color: white;
@@ -104,7 +121,7 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 
 /* ── SECTION HEADER ── */
 .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; gap: 12px; }
-.section-title { font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 700; letter-spacing: -0.3px; }
+.section-title  { font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 700; letter-spacing: -0.3px; }
 
 .search-input {
   padding: 8px 14px;
@@ -121,9 +138,10 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 .search-input:focus { border-color: var(--ink); background: white; }
 .search-input::placeholder { color: #c0c0bc; }
 
-/* ── QUIZ GRID & CARD ── */
+/* ── QUIZ GRID ── */
 .quiz-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
 
+/* ── QUIZ CARD ── */
 .quiz-card {
   background: var(--card);
   border: 1.5px solid var(--border);
@@ -134,7 +152,6 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
   gap: 14px;
   cursor: pointer;
   transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
-  text-decoration: none;
   color: inherit;
   -webkit-tap-highlight-color: transparent;
 }
@@ -151,9 +168,34 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 .quiz-name { font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 700; letter-spacing: -0.3px; line-height: 1.2; }
 .quiz-meta { font-size: 0.75rem; color: var(--muted); }
 
-.quiz-card-footer { display: flex; align-items: center; justify-content: space-between; padding-top: 12px; border-top: 1px solid var(--border); }
-.quiz-stats       { display: flex; gap: 12px; }
-.quiz-stat        { display: flex; align-items: center; gap: 4px; font-size: 0.72rem; color: var(--muted); font-weight: 500; }
+.quiz-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.quiz-stats { display: flex; gap: 12px; }
+.quiz-stat  { display: flex; align-items: center; gap: 4px; font-size: 0.72rem; color: var(--muted); font-weight: 500; }
+
+.quiz-card-actions { display: flex; align-items: center; gap: 6px; }
+
+/* QR-ikonknapp på kvar quiz-card */
+.btn-qr {
+  width: 30px; height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-qr:hover { background: var(--ink); color: white; border-color: var(--ink); }
 
 .btn-open {
   font-size: 0.72rem;
@@ -166,6 +208,7 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
   cursor: pointer;
   transition: all 0.15s;
   font-family: 'Epilogue', sans-serif;
+  text-decoration: none;
   -webkit-tap-highlight-color: transparent;
 }
 .btn-open:hover  { background: var(--ink); color: white; border-color: var(--ink); }
@@ -187,7 +230,7 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 .empty-title { font-family: 'Fraunces', serif; font-size: 1.1rem; font-weight: 700; }
 .empty-desc  { font-size: 0.82rem; color: var(--muted); max-width: 280px; }
 
-/* ── MODAL ── */
+/* ── MODAL OVERLAY (felles) ── */
 .modal-overlay {
   position: fixed;
   inset: 0;
@@ -203,6 +246,7 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 }
 .modal-overlay.open { opacity: 1; pointer-events: auto; }
 
+/* MODAL (botn-sheet på mobil) */
 .modal {
   background: var(--card);
   border: 1.5px solid var(--border);
@@ -217,15 +261,14 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 .modal::before {
   content: '';
   display: block;
-  width: 36px;
-  height: 4px;
+  width: 36px; height: 4px;
   background: var(--border);
   border-radius: 99px;
   margin: 0 auto 24px;
 }
 
 .modal-title { font-family: 'Fraunces', serif; font-size: 1.3rem; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 4px; }
-.modal-desc  { font-size: 0.78rem; color: var(--muted); margin-bottom: 24px; }
+.modal-desc  { font-size: 0.78rem; color: var(--muted); margin-bottom: 20px; }
 
 .modal-form  { display: flex; flex-direction: column; gap: 16px; }
 .modal-field { display: flex; flex-direction: column; gap: 5px; }
@@ -246,8 +289,7 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 
 .emoji-grid { display: flex; flex-wrap: wrap; gap: 8px; }
 .emoji-btn {
-  width: 42px;
-  height: 42px;
+  width: 42px; height: 42px;
   border: 1.5px solid var(--border);
   border-radius: 10px;
   background: var(--bg);
@@ -262,7 +304,7 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 .emoji-btn:hover,
 .emoji-btn.selected { border-color: var(--ink); background: white; }
 
-.modal-actions { display: flex; gap: 10px; margin-top: 4px; }
+.modal-actions { display: flex; gap: 10px; }
 
 .btn-cancel {
   flex: 1;
@@ -295,6 +337,29 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 .btn-submit:hover    { opacity: 0.85; }
 .btn-submit:disabled { opacity: 0.45; cursor: not-allowed; }
 
+/* ── QR MODAL SPESIFIKT ── */
+.qr-modal { max-width: 360px; }
+
+.qr-canvas-wrap {
+  display: flex;
+  justify-content: center;
+  background: white;
+  border: 1.5px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 10px;
+}
+.qr-canvas-wrap canvas { border-radius: 6px; }
+
+.qr-url {
+  font-size: 0.65rem;
+  color: var(--muted);
+  text-align: center;
+  word-break: break-all;
+  padding: 0 4px;
+  margin-bottom: 8px;
+}
+
 /* ── TOAST ── */
 .toast {
   position: fixed;
@@ -316,26 +381,39 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 /* ── SPINNER ── */
 .loading-row { grid-column: 1 / -1; display: flex; justify-content: center; padding: 48px; }
 
-/* ── TABLET (≥ 600px) ── */
+/* ════════════════════════════════
+   TABLET  (≥ 600px)
+════════════════════════════════ */
 @media (min-width: 600px) {
   .modal-overlay { align-items: center; padding: 16px; }
-  .modal { align-self: center; border-radius: 16px; max-width: 440px; padding: 36px 28px; transform: translateY(16px); }
+  .modal {
+    border-radius: 16px;
+    max-width: 440px;
+    padding: 32px 28px;
+    transform: translateY(16px);
+  }
   .modal::before { display: none; }
   .modal-overlay.open .modal { transform: translateY(0); }
+  .qr-modal { max-width: 360px; }
 }
 
-/* ── MOBILE (< 600px) ── */
+/* ════════════════════════════════
+   MOBIL  (< 600px)
+════════════════════════════════ */
 @media (max-width: 599px) {
   .topbar { padding: 0 16px; height: 56px; }
   .user-chip { padding: 5px; border-radius: 50%; }
   .user-chip span { display: none; }
   .logout-btn { padding: 7px 10px; font-size: 0.72rem; }
+  /* Gøym tekst på QR-knappen, vis berre ikon */
+  .qr-scan-btn span { display: none; }
+  .qr-scan-btn { padding: 7px 10px; }
 
   .main { padding: 24px 16px 100px; }
 
+  .page-title { font-size: 1.6rem; }
   .page-header { flex-direction: column; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
-  .page-title  { font-size: 1.6rem; }
-  .btn-create  { width: 100%; justify-content: center; padding: 14px; font-size: 1rem; border-radius: 12px; }
+  .btn-create { width: 100%; justify-content: center; padding: 14px; font-size: 1rem; border-radius: 12px; }
 
   .stats-row { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px; }
   .stats-row .stat-card:last-child { display: none; }
@@ -345,6 +423,5 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
   .search-input   { width: 100%; font-size: 1rem; padding: 10px 14px; }
 
   .quiz-grid { grid-template-columns: 1fr; gap: 12px; }
-
   .toast { bottom: 24px; max-width: calc(100vw - 32px); white-space: normal; text-align: center; }
 }

@@ -5,8 +5,9 @@ const db = createClient(SUPABASE_URL, SUPABASE_KEY)
 
 const EMOJIS = ['🗺️','🔍','🏆','🎯','🌍','🧭','🏫','🎓','📚','🔬','🎨','🧩','⚡','🌟','🚀','🦁','🐉','🌊']
 let selectedEmoji = EMOJIS[0]
-let allQuizzes = []
-let currentUser = null
+let allQuizzes    = []
+let currentUser   = null
+let activeQrQuizId = null
 
 // ── INIT ──
 async function init() {
@@ -14,7 +15,7 @@ async function init() {
   if (!data.session) { window.location.href = 'index.html'; return }
 
   currentUser = data.session.user
-  document.getElementById('userEmail').textContent = currentUser.email.split('@')[0]
+  document.getElementById('userEmail').textContent   = currentUser.email.split('@')[0]
   document.getElementById('userInitial').textContent = currentUser.email[0].toUpperCase()
 
   buildEmojiGrid()
@@ -70,15 +71,15 @@ function renderQuizzes(list) {
   }
 
   list.forEach(q => {
-    const card = document.createElement('a')
+    const card = document.createElement('div')
     card.className = 'quiz-card'
-    card.href = `quiz.html?id=${q.id}`
 
     const badgeClass = q.status === 'active' ? 'badge-active' : 'badge-draft'
     const badgeLabel = q.status === 'active' ? 'Aktiv' : 'Kladd'
     const date = new Date(q.created_at).toLocaleDateString('no', {
       day: 'numeric', month: 'short', year: 'numeric'
     })
+    const nameEsc = q.name.replace(/'/g, "\\'")
 
     card.innerHTML = `
       <div class="quiz-card-top">
@@ -92,10 +93,28 @@ function renderQuizzes(list) {
       <div class="quiz-card-footer">
         <div class="quiz-stats">
           <div class="quiz-stat">📝 ${q.question_count || 0} spørsmål</div>
-          <div class="quiz-stat">👥 ${q.session_count || 0} økter</div>
+          <div class="quiz-stat">👥 ${q.session_count  || 0} økter</div>
         </div>
-        <button class="btn-open">Opne →</button>
+        <div class="quiz-card-actions">
+          <button class="btn-qr"
+            onclick="event.stopPropagation(); openQrModal('${q.id}','${nameEsc}','${q.emoji || '🎯'}')"
+            title="Vis QR-kode">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <rect x="3" y="3" width="7" height="7" rx="1"/>
+              <rect x="14" y="3" width="7" height="7" rx="1"/>
+              <rect x="3" y="14" width="7" height="7" rx="1"/>
+              <path d="M14 14h2v2h-2zM18 14h3M14 18h2M18 18h3M14 22h3M18 22h2"/>
+            </svg>
+          </button>
+          <a class="btn-open" href="quiz.html?id=${q.id}" onclick="event.stopPropagation()">Opne →</a>
+        </div>
       </div>`
+
+    card.addEventListener('click', (e) => {
+      if (!e.target.closest('.quiz-card-actions')) {
+        window.location.href = `quiz.html?id=${q.id}`
+      }
+    })
 
     grid.appendChild(card)
   })
@@ -114,19 +133,55 @@ function filterQuizzes(q) {
   renderQuizzes(allQuizzes.filter(quiz => quiz.name.toLowerCase().includes(term)))
 }
 
-// ── MODAL ──
+// ── CREATE MODAL ──
 function openModal() {
   document.getElementById('modalOverlay').classList.add('open')
   setTimeout(() => document.getElementById('newName').focus(), 150)
 }
-
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('open')
   document.getElementById('newName').value = ''
 }
-
 function closeModalIfBg(e) {
   if (e.target === document.getElementById('modalOverlay')) closeModal()
+}
+
+// ── QR MODAL ──
+function openQrModal(quizId, quizName, emoji) {
+  activeQrQuizId = quizId
+
+  document.getElementById('qrModalTitle').textContent = emoji + ' ' + quizName
+
+  // URL som QR-koden peikar på: QR-scan.html?id=<quizId>
+  const base  = window.location.origin + window.location.pathname.replace('dashboard.html', '')
+  const qrUrl = `${base}QR-scan.html?id=${quizId}`
+  document.getElementById('qrUrl').textContent = qrUrl
+
+  const canvas = document.getElementById('qrCanvas')
+  QRCode.toCanvas(canvas, qrUrl, {
+    width: 200,
+    margin: 2,
+    color: { dark: '#111118', light: '#ffffff' }
+  }, err => { if (err) console.error(err) })
+
+  document.getElementById('qrModalOverlay').classList.add('open')
+}
+function closeQrModal() {
+  document.getElementById('qrModalOverlay').classList.remove('open')
+  activeQrQuizId = null
+}
+function closeQrModalIfBg(e) {
+  if (e.target === document.getElementById('qrModalOverlay')) closeQrModal()
+}
+function downloadQr() {
+  const canvas = document.getElementById('qrCanvas')
+  const quiz   = allQuizzes.find(q => q.id === activeQrQuizId)
+  const name   = quiz ? quiz.name.replace(/\s+/g, '_') : 'quiz'
+  const link   = document.createElement('a')
+  link.download = `QR_${name}.png`
+  link.href     = canvas.toDataURL('image/png')
+  link.click()
+  showToast('📥 QR-kode lasta ned!')
 }
 
 // ── CREATE QUIZ ──
@@ -157,8 +212,7 @@ async function createQuiz() {
     closeModal()
     showToast('✅ Quiz oppretta!')
   } catch {
-    // Viser lokalt om quizzes-tabellen ikkje er sett opp enno
-    newQuiz.id = Date.now()
+    newQuiz.id = 'local-' + Date.now()
     allQuizzes.unshift(newQuiz)
     renderQuizzes(allQuizzes)
     updateStats(allQuizzes)
@@ -186,7 +240,7 @@ async function logout() {
 
 // ── KEYBOARD ──
 document.addEventListener('keydown', e => {
-  if (e.key === 'Escape') closeModal()
+  if (e.key === 'Escape') { closeModal(); closeQrModal() }
   if (e.key === 'Enter' && document.getElementById('modalOverlay').classList.contains('open')) createQuiz()
 })
 
