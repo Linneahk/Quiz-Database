@@ -13,7 +13,20 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
   top: 0;
   z-index: 100;
 }
-.topbar-logo { font-family: 'Fraunces', serif; font-weight: 900; font-size: 1.3rem; letter-spacing: -0.5px; color: var(--ink); }
+.topbar-logo {
+  font-family: 'Fraunces', serif;
+  font-weight: 900;
+  font-size: 1.3rem;
+  letter-spacing: -0.5px;
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+  transition: opacity 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.topbar-logo:hover   { opacity: 0.7; }
+.topbar-logo:active  { opacity: 0.5; }
+
 .topbar-right { display: flex; align-items: center; gap: 10px; }
 
 /* QR skann-knapp i topbar */
@@ -60,6 +73,19 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+}
+
+/* Admin-merke i user-chip */
+.admin-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: var(--ink);
+  color: white;
+  border-radius: 99px;
+  padding: 2px 8px;
+  margin-left: 4px;
 }
 
 .logout-btn {
@@ -168,17 +194,31 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 .quiz-name { font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 700; letter-spacing: -0.3px; line-height: 1.2; }
 .quiz-meta { font-size: 0.75rem; color: var(--muted); }
 
+/* Eigar-line (synleg for admin på quizzar som ikkje er deira eigne) */
+.quiz-owner {
+  font-size: 0.7rem;
+  color: var(--muted);
+  margin-top: 4px;
+  display: inline-block;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-weight: 500;
+}
+
 .quiz-card-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding-top: 12px;
   border-top: 1px solid var(--border);
+  gap: 8px;
 }
 .quiz-stats { display: flex; gap: 12px; }
 .quiz-stat  { display: flex; align-items: center; gap: 4px; font-size: 0.72rem; color: var(--muted); font-weight: 500; }
 
-.quiz-card-actions { display: flex; align-items: center; gap: 6px; }
+.quiz-card-actions { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
 
 /* QR-ikonknapp på kvar quiz-card */
 .btn-qr {
@@ -196,6 +236,27 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
   -webkit-tap-highlight-color: transparent;
 }
 .btn-qr:hover { background: var(--ink); color: white; border-color: var(--ink); }
+
+/* Slett-knapp på kvar quiz-card */
+.btn-delete-quiz {
+  width: 30px; height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-delete-quiz:hover {
+  background: #fff5f5;
+  color: var(--error);
+  border-color: var(--error);
+}
 
 .btn-open {
   font-size: 0.72rem;
@@ -268,7 +329,7 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 }
 
 .modal-title { font-family: 'Fraunces', serif; font-size: 1.3rem; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 4px; }
-.modal-desc  { font-size: 0.78rem; color: var(--muted); margin-bottom: 20px; }
+.modal-desc  { font-size: 0.78rem; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
 
 .modal-form  { display: flex; flex-direction: column; gap: 16px; }
 .modal-field { display: flex; flex-direction: column; gap: 5px; }
@@ -337,6 +398,23 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 .btn-submit:hover    { opacity: 0.85; }
 .btn-submit:disabled { opacity: 0.45; cursor: not-allowed; }
 
+/* Slett-knapp i bekreftelses-modal */
+.btn-danger {
+  flex: 2;
+  padding: 13px;
+  border: none;
+  border-radius: 10px;
+  background: var(--error);
+  color: white;
+  font-family: 'Fraunces', serif;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.btn-danger:hover    { opacity: 0.85; }
+.btn-danger:disabled { opacity: 0.45; cursor: not-allowed; }
+
 /* ── QR MODAL SPESIFIKT ── */
 .qr-modal { max-width: 360px; }
 
@@ -359,6 +437,9 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
   padding: 0 4px;
   margin-bottom: 8px;
 }
+
+/* Slett-modal */
+.delete-modal { max-width: 420px; }
 
 /* ── TOAST ── */
 .toast {
@@ -395,6 +476,7 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
   .modal::before { display: none; }
   .modal-overlay.open .modal { transform: translateY(0); }
   .qr-modal { max-width: 360px; }
+  .delete-modal { max-width: 420px; }
 }
 
 /* ════════════════════════════════
@@ -404,6 +486,11 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
   .topbar { padding: 0 16px; height: 56px; }
   .user-chip { padding: 5px; border-radius: 50%; }
   .user-chip span { display: none; }
+  .admin-badge {
+    position: absolute;
+    /* På mobil er user-chip rund – skjul tekst-merke for å spare plass */
+    display: none;
+  }
   .logout-btn { padding: 7px 10px; font-size: 0.72rem; }
   /* Gøym tekst på QR-knappen, vis berre ikon */
   .qr-scan-btn span { display: none; }
