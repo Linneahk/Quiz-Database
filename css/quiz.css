@@ -34,8 +34,22 @@
   font-weight: 900;
   letter-spacing: -1px;
   line-height: 1.1;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
 }
 .editor-title span { font-style: italic; }
+
+/* Liten fargeprikk ved sida av quiz-tittelen */
+.quiz-color-dot {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  margin-right: 4px;
+  vertical-align: middle;
+}
 
 .editor-subtitle {
   font-size: .8rem;
@@ -348,37 +362,51 @@
   #printArea {
     position: fixed;
     inset: 0;
-    padding: 20mm;
+    padding: 16mm;
     background: white;
   }
   .print-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 16mm;
+    gap: 12mm;
   }
   .print-card {
-    border: 1.5px solid #ccc;
-    border-radius: 8px;
-    padding: 12mm;
+    border: 1.5px solid;
+    border-radius: 10px;
+    padding: 10mm;
     page-break-inside: avoid;
     text-align: center;
     font-family: 'Epilogue', sans-serif;
+    /* Tving nettleseren til å skrive ut bakgrunnsfargen */
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
   }
   .print-card-num {
     font-family: 'Fraunces', serif;
-    font-size: 11pt;
+    font-size: 12pt;
     font-weight: 900;
-    color: #111;
     margin-bottom: 3mm;
   }
   .print-card-q {
-    font-size: 9pt;
-    color: #555;
+    font-size: 10pt;
     margin-bottom: 5mm;
     line-height: 1.3;
+    font-weight: 500;
   }
-  .print-card-qr { margin: 0 auto 4mm; }
-  .print-card-hint { font-size: 7.5pt; color: #999; }
+  .print-card-qr-wrap {
+    /* Hvit ramme rundt QR-koden så den alltid kan skannast,
+       uavhengig av kva farge kortet har */
+    background: white;
+    border-radius: 8px;
+    padding: 4mm;
+    display: inline-block;
+    margin: 0 auto 4mm;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  .print-card-qr { display: inline-block; }
+  .print-card-hint { font-size: 8pt; }
 }
 
 /* ── RESPONSIVE ── */

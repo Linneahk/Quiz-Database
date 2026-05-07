@@ -7,7 +7,31 @@ const params   = new URLSearchParams(location.search)
 const quizId   = params.get('id')
 const BASE_URL = `${location.origin}${location.pathname.replace('quiz.html','question.html')}`
 
+// Same fargepalett som dashboard – brukt for å finne ink (skriftfarge) til print
+const COLORS = [
+  { bg: '#c8f050', ink: '#111118' },
+  { bg: '#22c55e', ink: '#ffffff' },
+  { bg: '#a7f3d0', ink: '#064e3b' },
+  { bg: '#3b82f6', ink: '#ffffff' },
+  { bg: '#7dd3fc', ink: '#0c4a6e' },
+  { bg: '#6366f1', ink: '#ffffff' },
+  { bg: '#a855f7', ink: '#ffffff' },
+  { bg: '#ec4899', ink: '#ffffff' },
+  { bg: '#fdba74', ink: '#7c2d12' },
+  { bg: '#f97316', ink: '#ffffff' },
+  { bg: '#ef4444', ink: '#ffffff' },
+  { bg: '#991b1b', ink: '#ffffff' },
+  { bg: '#fde047', ink: '#111118' },
+  { bg: '#fef3c7', ink: '#78350f' },
+  { bg: '#9ca3af', ink: '#ffffff' },
+  { bg: '#1f2937', ink: '#ffffff' }
+]
+function findColor(bg) {
+  return COLORS.find(c => c.bg === bg) || COLORS[0]
+}
+
 let currentUser    = null
+let currentQuiz    = null
 let questions      = []
 let localIdCounter = 0
 
@@ -27,7 +51,16 @@ async function init() {
 
   const { data: quiz } = await db.from('quizzes').select('*').eq('id', quizId).single()
   if (quiz) {
-    document.getElementById('quizTitle').innerHTML = `${quiz.emoji || ''} <span>${quiz.name}</span>`
+    currentQuiz = quiz
+    document.getElementById('quizTitle').innerHTML = `<span>${esc(quiz.name)}</span>`
+
+    // Vis ein liten fargeprikk i tittelen som indikerer quizfargen
+    const color = findColor(quiz.color || COLORS[0].bg)
+    const titleEl = document.getElementById('quizTitle')
+    const dot = document.createElement('span')
+    dot.className = 'quiz-color-dot'
+    dot.style.background = color.bg
+    titleEl.parentNode.insertBefore(dot, titleEl)
   }
 
   const { data: qs } = await db
@@ -54,8 +87,7 @@ function addQuestion() {
     question_text: '',
     options: ['', '', '', ''],
     answer: '',
-    points: 10,
-    emoji: '',
+    points: 1,         // alltid 1
     image_url: '',
     _saved: false
   }
@@ -112,21 +144,6 @@ function renderList() {
             <input class="field-input" type="text" placeholder="Skriv spørsmålet her…"
               value="${esc(q.question_text || '')}"
               oninput="updateField(${q._localId}, 'question_text', this.value)" />
-          </div>
-        </div>
-
-        <div class="form-row">
-          <div>
-            <label class="field-label">Emoji (valfritt)</label>
-            <input class="field-input" type="text" placeholder="t.d. 🗺️"
-              value="${esc(q.emoji || '')}"
-              oninput="updateField(${q._localId}, 'emoji', this.value)" />
-          </div>
-          <div>
-            <label class="field-label">Poeng</label>
-            <input class="points-input field-input" type="number" min="1" max="100"
-              value="${q.points || 10}"
-              oninput="updateField(${q._localId}, 'points', parseInt(this.value)||10)" />
           </div>
         </div>
 
@@ -254,8 +271,7 @@ async function saveQuestion(lid) {
     question_text: q.question_text.trim(),
     options:       q.options,
     answer:        q.answer,
-    points:        q.points || 10,
-    emoji:         q.emoji || null,
+    points:        1,                         // alltid 1
     image_url:     q.image_url || null,
     is_active:     true,
     "order":       questions.indexOf(q),
@@ -279,6 +295,7 @@ async function saveQuestion(lid) {
 
   q.id     = saved.id
   q._saved = true
+  q.points = 1
 
   btn.disabled = false
   btn.textContent = 'Lagre spørsmål'
@@ -339,16 +356,28 @@ function printQR() {
   const saved = questions.filter(q => q._saved && q.id)
   if (saved.length === 0) return showToast('⚠️ Lagre minst eitt spørsmål fyrst')
 
+  // Hent quiz-farge for print – fallback til lime
+  const color    = findColor(currentQuiz && currentQuiz.color ? currentQuiz.color : COLORS[0].bg)
+  const bgColor  = color.bg
+  const inkColor = color.ink
+
   const printArea = document.getElementById('printArea')
   printArea.style.display = 'block'
+
+  // Set CSS-variablar slik at print-stil-arket kan bruke fargane
+  printArea.style.setProperty('--print-bg',  bgColor)
+  printArea.style.setProperty('--print-ink', inkColor)
+
   printArea.innerHTML = `
     <div class="print-grid">
       ${saved.map((q, i) => `
-        <div class="print-card">
-          <div class="print-card-num">Spørsmål ${i + 1} ${q.emoji || ''}</div>
-          <div class="print-card-q">${q.question_text}</div>
-          <div class="print-card-qr" id="print-qr-${q.id}"></div>
-          <div class="print-card-hint">Skann QR-koden for å svare</div>
+        <div class="print-card" style="background:${bgColor}; color:${inkColor}; border-color:${inkColor}">
+          <div class="print-card-num" style="color:${inkColor}">Spørsmål ${i + 1}</div>
+          <div class="print-card-q" style="color:${inkColor}; opacity:.85">${esc(q.question_text)}</div>
+          <div class="print-card-qr-wrap">
+            <div class="print-card-qr" id="print-qr-${q.id}"></div>
+          </div>
+          <div class="print-card-hint" style="color:${inkColor}; opacity:.7">Skann QR-koden for å svare</div>
         </div>
       `).join('')}
     </div>`
