@@ -1,33 +1,449 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>QR Code Scanner</title>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-  </head>
-  <body>
-    <h1>Scan a QR Code</h1>
+<!DOCTYPE html>
+<html lang="no">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QuizApp – Skann QR</title>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,900;1,700&family=Epilogue:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* ── PAGE OVERRIDES ── */
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0;
+      min-height: 100vh;
+    }
 
-    <div id="reader" style="width: 500px"></div>
-    <p id="result"></p>
+    /* TOPBAR */
+    .topbar {
+      width: 100%;
+      background: var(--card);
+      border-bottom: 1.5px solid var(--border);
+      padding: 0 24px;
+      height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      flex-shrink: 0;
+    }
+    .topbar-logo {
+      font-family: 'Fraunces', serif;
+      font-weight: 900;
+      font-size: 1.3rem;
+      letter-spacing: -0.5px;
+      color: var(--ink);
+      text-decoration: none;
+    }
+    .back-btn {
+      background: none;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      padding: 7px 14px;
+      font-family: 'Epilogue', sans-serif;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+      text-decoration: none;
+    }
+    .back-btn:hover { border-color: var(--ink); color: var(--ink); }
 
-    <script>
-      function onScanSuccess(decodedText, decodedResult) {
-        document.getElementById("result").innerText = "Found: " + decodedText;
-        html5QrcodeScanner.clear();
-      }
+    /* MAIN WRAPPER */
+    .wrap {
+      width: 100%;
+      max-width: 480px;
+      padding: 36px 24px 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 24px;
+      animation: fadeUp 0.3s ease;
+    }
 
-      function onScanFailure(error) {
-        // Optional: log scan errors silently
-      }
+    .page-title {
+      font-family: 'Fraunces', serif;
+      font-weight: 900;
+      font-size: 1.8rem;
+      letter-spacing: -1px;
+      text-align: center;
+      line-height: 1.1;
+    }
+    .page-title span { font-style: italic; }
+    .page-sub {
+      font-size: 0.82rem;
+      color: var(--muted);
+      text-align: center;
+      margin-top: -16px;
+    }
 
-      let html5QrcodeScanner = new Html5QrcodeScanner("reader", {
+    /* SCANNER BOX */
+    .scanner-card {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    /* Override html5-qrcode styles */
+    #qr-reader { width: 100% !important; border: none !important; }
+    #qr-reader video { border-radius: 0 !important; border: none !important; }
+    #qr-reader__scan_region { border: none !important; }
+    #qr-reader__dashboard {
+      padding: 16px !important;
+      border-top: 1.5px solid var(--border) !important;
+      background: var(--bg) !important;
+    }
+    #qr-reader__dashboard_section_csr button {
+      font-family: 'Epilogue', sans-serif !important;
+      font-size: 0.82rem !important;
+      color: var(--ink) !important;
+      background: var(--card) !important;
+      border: 1.5px solid var(--border) !important;
+      border-radius: 8px !important;
+      padding: 8px 14px !important;
+      cursor: pointer !important;
+    }
+    #qr-reader__dashboard_section_csr button:hover { border-color: var(--ink) !important; }
+    #qr-reader select {
+      font-family: 'Epilogue', sans-serif !important;
+      font-size: 0.82rem !important;
+      border: 1.5px solid var(--border) !important;
+      border-radius: 8px !important;
+      padding: 6px 10px !important;
+      background: white !important;
+      color: var(--ink) !important;
+    }
+    #qr-reader__camera_permission_button {
+      background: var(--ink) !important;
+      color: white !important;
+      border: none !important;
+      font-family: 'Fraunces', serif !important;
+      font-size: 0.9rem !important;
+      font-weight: 700 !important;
+      padding: 12px 22px !important;
+      border-radius: 10px !important;
+      cursor: pointer !important;
+    }
+
+    /* STATUS */
+    .status-msg {
+      width: 100%;
+      padding: 12px 16px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      display: none;
+    }
+    .status-msg.error   { background: #fff5f5; color: var(--error);   border: 1px solid #fed7d7; display: block; }
+    .status-msg.success { background: #f0fff4; color: var(--success); border: 1px solid #c6f6d5; display: block; }
+    .status-msg.info    { background: #eff6ff; color: #2563eb;        border: 1px solid #bfdbfe; display: block; }
+
+    /* RESULT CARD */
+    .result-card {
+      background: var(--card);
+      border: 1.5px solid var(--border);
+      border-radius: 20px;
+      padding: 24px;
+      width: 100%;
+      display: none;
+      flex-direction: column;
+      gap: 18px;
+      animation: fadeUp 0.25s ease;
+    }
+    .result-card.visible { display: flex; }
+
+    .result-header { display: flex; align-items: center; gap: 14px; }
+    .result-emoji  { font-size: 2.2rem; line-height: 1; }
+    .result-name   { font-family: 'Fraunces', serif; font-size: 1.25rem; font-weight: 900; letter-spacing: -0.5px; }
+    .result-label  { font-size: 0.72rem; color: var(--success); margin-top: 2px; font-weight: 600; }
+
+    .result-stats  { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .result-stat   { background: var(--bg); border: 1.5px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+    .result-stat-label { font-size: 0.68rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 4px; }
+    .result-stat-value { font-family: 'Fraunces', serif; font-size: 1.4rem; font-weight: 900; letter-spacing: -0.5px; }
+
+    .result-actions { display: flex; gap: 10px; }
+    .btn-secondary {
+      flex: 1;
+      padding: 13px;
+      border: 1.5px solid var(--border);
+      border-radius: 10px;
+      background: transparent;
+      font-family: 'Epilogue', sans-serif;
+      font-size: 0.88rem;
+      font-weight: 500;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s;
+    }
+    .btn-secondary:hover { border-color: var(--ink); color: var(--ink); }
+
+    .btn-primary {
+      flex: 2;
+      padding: 13px;
+      border: none;
+      border-radius: 10px;
+      background: var(--ink);
+      color: white;
+      font-family: 'Fraunces', serif;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-primary:hover { opacity: 0.85; }
+
+    /* DIVIDER */
+    .divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      color: var(--muted);
+      font-size: 0.72rem;
+    }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* MANUAL INPUT */
+    .manual-row { display: flex; gap: 8px; width: 100%; }
+    .manual-input {
+      flex: 1;
+      padding: 11px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: 8px;
+      font-family: 'Epilogue', sans-serif;
+      font-size: 0.9rem;
+      color: var(--ink);
+      background: var(--bg);
+      outline: none;
+      transition: border-color 0.15s;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    .manual-input:focus { border-color: var(--ink); background: white; }
+    .manual-input::placeholder { color: #c0c0bc; text-transform: none; letter-spacing: 0; }
+    .manual-btn {
+      padding: 11px 18px;
+      border: none;
+      border-radius: 8px;
+      background: var(--ink);
+      color: white;
+      font-family: 'Fraunces', serif;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      white-space: nowrap;
+    }
+    .manual-btn:hover { opacity: 0.85; }
+
+    /* LOCAL SPINNER */
+    .spin-sm {
+      display: inline-block;
+      width: 13px; height: 13px;
+      border: 2px solid rgba(37,99,235,0.2);
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      vertical-align: middle;
+      margin-right: 6px;
+    }
+
+    @media (max-width: 480px) {
+      .wrap { padding: 24px 16px 80px; }
+      .topbar { padding: 0 16px; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <a href="dashboard.html" class="topbar-logo">QuizApp</a>
+    <a href="dashboard.html" class="back-btn">← Tilbake</a>
+  </header>
+
+  <div class="wrap">
+    <div class="page-title">Skann <span>QR-kode</span></div>
+    <div class="page-sub">Hald kameraet over QR-koden for å opne ein quiz</div>
+
+    <!-- SCANNER -->
+    <div class="scanner-card">
+      <div id="qr-reader"></div>
+    </div>
+
+    <!-- STATUS -->
+    <div class="status-msg" id="statusMsg"></div>
+
+    <!-- RESULT CARD -->
+    <div class="result-card" id="resultCard">
+      <div class="result-header">
+        <div class="result-emoji" id="resultEmoji">🎯</div>
+        <div>
+          <div class="result-name" id="resultName">–</div>
+          <div class="result-label">✅ Quiz funne!</div>
+        </div>
+      </div>
+      <div class="result-stats">
+        <div class="result-stat">
+          <div class="result-stat-label">Spørsmål</div>
+          <div class="result-stat-value" id="resultQCount">–</div>
+        </div>
+        <div class="result-stat">
+          <div class="result-stat-label">Status</div>
+          <div class="result-stat-value" id="resultStatus">–</div>
+        </div>
+      </div>
+      <div class="result-actions">
+        <button class="btn-secondary" onclick="resetScanner()">Skann ny</button>
+        <a class="btn-primary" id="resultLink" href="#">Opne quiz →</a>
+      </div>
+    </div>
+
+    <!-- MANUAL INPUT -->
+    <div class="divider">eller skriv inn quiz-ID manuelt</div>
+    <div class="manual-row">
+      <input class="manual-input" type="text" id="manualCode" placeholder="Lim inn quiz-ID" maxlength="40" />
+      <button class="manual-btn" onclick="lookupManual()">Søk</button>
+    </div>
+  </div>
+
+  <script>
+    // ── SUPABASE ──
+    const SUPABASE_URL = 'https://owgldsfxpmzpkipgeksr.supabase.co'
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93Z2xkc2Z4cG16cGtpcGdla3NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4MDM2NTYsImV4cCI6MjA5MjM3OTY1Nn0.bD5dNHcQfjjq29DprTnVafxuZeCvt30zu0qQItq6AXY'
+    const { createClient } = supabase
+    const db = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+    let scanner = null
+    let scanDone = false
+
+    // ── INIT SCANNER ──
+    function initScanner() {
+      scanner = new Html5QrcodeScanner('qr-reader', {
         fps: 10,
-        qrbox: 250,
-      });
+        qrbox: { width: 240, height: 240 },
+        rememberLastUsedCamera: true,
+        showTorchButtonIfSupported: true,
+      })
+      scanner.render(onScanSuccess, () => {})
+    }
 
-      html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-    </script>
-  </body>
+    // ── ON SCAN ──
+    async function onScanSuccess(decodedText) {
+      if (scanDone) return
+      scanDone = true
+      showStatus('<span class="spin-sm"></span> Lastar quiz…', 'info')
+
+      // QR-koden frå quiz.js er: <baseUrl>/question.html?id=<questionId>
+      // QR-koden frå dashboard er: QR-scan.html?id=<quizId>
+      // Støttar begge + rå UUID
+      let quizId = null
+
+      try {
+        const url = new URL(decodedText)
+        // Hent ?id= frå URL
+        const id = url.searchParams.get('id')
+        if (id) quizId = id
+      } catch {
+        // Ikkje gyldig URL – prøv som rå UUID
+        if (decodedText.trim().length > 10) quizId = decodedText.trim()
+      }
+
+      if (!quizId) {
+        showStatus('❌ Ugyldig QR-kode.', 'error')
+        scanDone = false
+        return
+      }
+
+      await lookupQuiz(quizId)
+    }
+
+    // ── LOOKUP QUIZ ──
+    async function lookupQuiz(id) {
+      // id kan vera anten quiz-ID direkte eller question-ID
+      // Prøv quiz-tabellen fyrst
+      let { data: quiz, error } = await db.from('quizzes').select('*').eq('id', id).single()
+
+      // Om ikkje funne: prøv questions-tabellen og hent quiz via major_id
+      if (error || !quiz) {
+        const { data: question } = await db.from('questions').select('major_id').eq('id', id).single()
+        if (question?.major_id) {
+          const res = await db.from('quizzes').select('*').eq('id', question.major_id).single()
+          quiz = res.data
+        }
+      }
+
+      if (!quiz) {
+        showStatus('❌ Fann ikkje quiz. Sjekk at QR-koden er riktig.', 'error')
+        scanDone = false
+        return
+      }
+
+      showResult(quiz)
+    }
+
+    // ── SHOW RESULT ──
+    function showResult(quiz) {
+      clearStatus()
+      document.getElementById('resultEmoji').textContent   = quiz.emoji || '🎯'
+      document.getElementById('resultName').textContent    = quiz.name
+      document.getElementById('resultQCount').textContent  = quiz.question_count ?? '–'
+      document.getElementById('resultStatus').textContent  = quiz.status === 'active' ? '🟢 Aktiv' : '📝 Kladd'
+      document.getElementById('resultLink').href           = `quiz.html?id=${quiz.id}`
+      document.getElementById('resultCard').classList.add('visible')
+      if (scanner) scanner.clear().catch(() => {})
+    }
+
+    // ── MANUAL ──
+    async function lookupManual() {
+      const raw = document.getElementById('manualCode').value.trim()
+      if (!raw) return
+      scanDone = true
+      showStatus('<span class="spin-sm"></span> Søkjer…', 'info')
+      await lookupQuiz(raw)
+    }
+
+    // ── RESET ──
+    function resetScanner() {
+      scanDone = false
+      document.getElementById('resultCard').classList.remove('visible')
+      document.getElementById('manualCode').value = ''
+      clearStatus()
+      document.getElementById('qr-reader').innerHTML = ''
+      initScanner()
+    }
+
+    // ── HELPERS ──
+    function showStatus(html, type) {
+      const el = document.getElementById('statusMsg')
+      el.innerHTML = html
+      el.className = 'status-msg ' + type
+    }
+    function clearStatus() {
+      const el = document.getElementById('statusMsg')
+      el.className = 'status-msg'
+      el.innerHTML = ''
+    }
+
+    document.getElementById('manualCode').addEventListener('keydown', e => {
+      if (e.key === 'Enter') lookupManual()
+    })
+
+    initScanner()
+  </script>
+</body>
 </html>

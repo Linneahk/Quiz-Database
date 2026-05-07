@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>QuizApp – Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <!-- QR-kode-generator (for å lage QR frå dashboard) -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,900;1,700&family=Epilogue:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/dashboard.css">
@@ -13,9 +15,19 @@
 
   <!-- TOPBAR -->
   <header class="topbar">
-    <div class="topbar-logo">QuizApp</div>
+    <a href="dashboard.html" class="topbar-logo">QuizApp</a>
     <div class="topbar-right">
-      <div class="user-chip">
+      <!-- QR-skann-knapp -->
+      <a href="QR-scan.html" class="qr-scan-btn" title="Skann QR-kode">
+        <svg width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <rect x="3" y="3" width="7" height="7" rx="1"/>
+          <rect x="14" y="3" width="7" height="7" rx="1"/>
+          <rect x="3" y="14" width="7" height="7" rx="1"/>
+          <path d="M14 14h2v2h-2zM18 14h3M14 18h2M18 18h3M14 22h3M18 22h2"/>
+        </svg>
+        <span>Skann QR</span>
+      </a>
+      <div class="user-chip" id="userChip">
         <div class="user-avatar" id="userInitial">?</div>
         <span id="userEmail">…</span>
       </div>
@@ -65,7 +77,7 @@
 
   </main>
 
-  <!-- MODAL -->
+  <!-- OPPRETT QUIZ MODAL -->
   <div class="modal-overlay" id="modalOverlay" onclick="closeModalIfBg(event)">
     <div class="modal">
       <div class="modal-title">Ny quiz</div>
@@ -83,6 +95,39 @@
           <button class="btn-cancel" onclick="closeModal()">Avbryt</button>
           <button class="btn-submit" id="submitBtn" onclick="createQuiz()">Opprett quiz</button>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR MODAL -->
+  <div class="modal-overlay" id="qrModalOverlay" onclick="closeQrModalIfBg(event)">
+    <div class="modal qr-modal">
+      <div class="modal-title" id="qrModalTitle">QR-kode</div>
+      <div class="modal-desc">Del denne QR-koden med elevane – dei skannar for å kome til quizen</div>
+      <div class="qr-canvas-wrap">
+        <canvas id="qrCanvas"></canvas>
+      </div>
+      <div class="qr-url" id="qrUrl"></div>
+      <div class="modal-actions" style="margin-top:16px">
+        <button class="btn-cancel" onclick="closeQrModal()">Lukk</button>
+        <button class="btn-submit" onclick="downloadQr()">📥 Last ned</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLETT-BEKREFTELSE MODAL -->
+  <div class="modal-overlay" id="deleteOverlay" onclick="closeDeleteModalIfBg(event)">
+    <div class="modal delete-modal">
+      <div class="modal-title">Slett quiz?</div>
+      <div class="modal-desc">
+        Er du sikker på at du vil slette
+        <strong id="deleteQuizName" style="color:var(--ink)">denne quizen</strong>?
+        Alle spørsmål knytte til quizen vert sletta.
+        <span style="display:block; margin-top:6px; color:var(--error)">Denne handlinga kan ikkje angrast.</span>
+      </div>
+      <div class="modal-actions" style="margin-top:8px">
+        <button class="btn-cancel" onclick="closeDeleteModal()">Avbryt</button>
+        <button class="btn-danger" id="deleteConfirmBtn" onclick="confirmDeleteQuiz()">Slett quiz</button>
       </div>
     </div>
   </div>
