@@ -3,14 +3,39 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const { createClient } = supabase
 const db = createClient(SUPABASE_URL, SUPABASE_KEY)
 
-const EMOJIS = ['🗺️','🔍','🏆','🎯','🌍','🧭','🏫','🎓','📚','🔬','🎨','🧩','⚡','🌟','🚀','🦁','🐉','🌊']
-let selectedEmoji  = EMOJIS[0]
-let allQuizzes     = []
-let teachersById   = {}        // { teacher_id: { email, full_name } }
-let currentUser    = null
-let isAdmin        = false
-let activeQrQuizId = null
+// ── FARGEPALETT ──
+// Kvar farge har bg (bakgrunn) og ink (skriftfarge med god kontrast)
+const COLORS = [
+  { name: 'Lime',    bg: '#c8f050', ink: '#111118' },
+  { name: 'Grøn',    bg: '#22c55e', ink: '#ffffff' },
+  { name: 'Mint',    bg: '#a7f3d0', ink: '#064e3b' },
+  { name: 'Blå',     bg: '#3b82f6', ink: '#ffffff' },
+  { name: 'Himmel',  bg: '#7dd3fc', ink: '#0c4a6e' },
+  { name: 'Indigo',  bg: '#6366f1', ink: '#ffffff' },
+  { name: 'Lilla',   bg: '#a855f7', ink: '#ffffff' },
+  { name: 'Rosa',    bg: '#ec4899', ink: '#ffffff' },
+  { name: 'Fersken', bg: '#fdba74', ink: '#7c2d12' },
+  { name: 'Oransje', bg: '#f97316', ink: '#ffffff' },
+  { name: 'Raud',    bg: '#ef4444', ink: '#ffffff' },
+  { name: 'Vinrød',  bg: '#991b1b', ink: '#ffffff' },
+  { name: 'Gul',     bg: '#fde047', ink: '#111118' },
+  { name: 'Sand',    bg: '#fef3c7', ink: '#78350f' },
+  { name: 'Grå',     bg: '#9ca3af', ink: '#ffffff' },
+  { name: 'Svart',   bg: '#1f2937', ink: '#ffffff' }
+]
+
+let selectedColor   = COLORS[0]
+let allQuizzes      = []
+let teachersById    = {}
+let currentUser     = null
+let isAdmin         = false
+let activeQrQuizId  = null
 let pendingDeleteId = null
+
+// Hjelp: finn farge-objekt frå lagra bg-verdi
+function findColor(bg) {
+  return COLORS.find(c => c.bg === bg) || COLORS[0]
+}
 
 // ── INIT ──
 async function init() {
@@ -21,7 +46,7 @@ async function init() {
   document.getElementById('userEmail').textContent   = currentUser.email.split('@')[0]
   document.getElementById('userInitial').textContent = currentUser.email[0].toUpperCase()
 
-  // Sjekk om brukaren er admin
+  // Sjekk om brukaren er admin (men IKKJE vis merke)
   const { data: me } = await db
     .from('teachers')
     .select('is_admin')
@@ -29,32 +54,25 @@ async function init() {
     .single()
   isAdmin = !!(me && me.is_admin)
 
-  // Vis admin-merke om aktuelt
-  if (isAdmin) {
-    const chip = document.getElementById('userChip')
-    if (chip && !chip.querySelector('.admin-badge')) {
-      const badge = document.createElement('span')
-      badge.className = 'admin-badge'
-      badge.textContent = 'Admin'
-      chip.appendChild(badge)
-    }
-  }
-
-  buildEmojiGrid()
+  buildColorGrid()
   loadQuizzes()
 }
 
-// ── EMOJI GRID ──
-function buildEmojiGrid() {
-  const grid = document.getElementById('emojiGrid')
-  EMOJIS.forEach((e, i) => {
+// ── COLOR GRID ──
+function buildColorGrid() {
+  const grid = document.getElementById('colorGrid')
+  grid.innerHTML = ''
+  COLORS.forEach((c, i) => {
     const btn = document.createElement('button')
-    btn.className = 'emoji-btn' + (i === 0 ? ' selected' : '')
-    btn.textContent = e
+    btn.type = 'button'
+    btn.className = 'color-btn' + (i === 0 ? ' selected' : '')
+    btn.style.background = c.bg
+    btn.title = c.name
+    btn.setAttribute('aria-label', c.name)
     btn.onclick = () => {
-      document.querySelectorAll('.emoji-btn').forEach(b => b.classList.remove('selected'))
+      document.querySelectorAll('.color-btn').forEach(b => b.classList.remove('selected'))
       btn.classList.add('selected')
-      selectedEmoji = e
+      selectedColor = c
     }
     grid.appendChild(btn)
   })
@@ -64,15 +82,12 @@ function buildEmojiGrid() {
 async function loadQuizzes() {
   try {
     let query = db.from('quizzes').select('*').order('created_at', { ascending: false })
-    // Admin: hent alle. Vanleg lærar: berre sine eigne (RLS handterer dette uansett,
-    // men vi sender ikkje filter slik at admin-policyen får sleppe alle gjennom).
     if (!isAdmin) query = query.eq('teacher_id', currentUser.id)
 
     const { data, error } = await query
     if (error) throw error
     allQuizzes = data || []
 
-    // For admin: hent lærar-info så vi kan vise kven som eig kvar quiz
     if (isAdmin && allQuizzes.length > 0) {
       const ids = [...new Set(allQuizzes.map(q => q.teacher_id).filter(Boolean))]
       if (ids.length > 0) {
@@ -111,16 +126,24 @@ function renderQuizzes(list) {
     const card = document.createElement('div')
     card.className = 'quiz-card'
 
-    const badgeClass = q.status === 'active' ? 'badge-active' : 'badge-draft'
-    const badgeLabel = q.status === 'active' ? 'Aktiv' : 'Kladd'
+    // Hent farge frå quiz (fallback til lime)
+    const color    = findColor(q.color || COLORS[0].bg)
+    const bgColor  = color.bg
+    const inkColor = color.ink
+
+    // Sett accent-farge på kortet via CSS-variabler
+    card.style.setProperty('--quiz-bg',  bgColor)
+    card.style.setProperty('--quiz-ink', inkColor)
+
     const date = new Date(q.created_at).toLocaleDateString('no', {
       day: 'numeric', month: 'short', year: 'numeric'
     })
 
     const nameEsc  = escAttr(q.name)
-    const emojiEsc = escAttr(q.emoji || '🎯')
+    const colorEsc = escAttr(bgColor)
+    const inkEsc   = escAttr(inkColor)
 
-    // Eigar-line (berre admin ser dette, og berre når quizen ikkje er deira eiga)
+    // Eigar-line (berre admin ser dette på andre sine quizzar)
     let ownerLine = ''
     if (isAdmin && q.teacher_id !== currentUser.id) {
       const t = teachersById[q.teacher_id]
@@ -131,45 +154,44 @@ function renderQuizzes(list) {
     }
 
     card.innerHTML = `
-      <div class="quiz-card-top">
-        <div class="quiz-emoji">${escHtml(q.emoji || '🎯')}</div>
-        <span class="quiz-badge ${badgeClass}">${badgeLabel}</span>
+      <div class="quiz-color-band" style="background:${bgColor}; color:${inkColor}">
+        <span class="quiz-color-name">${escHtml(q.name)}</span>
       </div>
-      <div>
-        <div class="quiz-name">${escHtml(q.name)}</div>
+      <div class="quiz-card-body">
         <div class="quiz-meta">Oppretta ${date}</div>
         ${ownerLine}
-      </div>
-      <div class="quiz-card-footer">
-        <div class="quiz-stats">
-          <div class="quiz-stat">📝 ${q.question_count || 0} spørsmål</div>
-          <div class="quiz-stat">👥 ${q.session_count  || 0} økter</div>
-        </div>
-        <div class="quiz-card-actions">
-          <button class="btn-qr"
-            data-quiz-id="${q.id}"
-            data-quiz-name="${nameEsc}"
-            data-quiz-emoji="${emojiEsc}"
-            title="Vis QR-kode">
-            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <rect x="3" y="3" width="7" height="7" rx="1"/>
-              <rect x="14" y="3" width="7" height="7" rx="1"/>
-              <rect x="3" y="14" width="7" height="7" rx="1"/>
-              <path d="M14 14h2v2h-2zM18 14h3M14 18h2M18 18h3M14 22h3M18 22h2"/>
-            </svg>
-          </button>
-          <button class="btn-delete-quiz"
-            data-quiz-id="${q.id}"
-            data-quiz-name="${nameEsc}"
-            title="Slett quiz">
-            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-              <polyline points="3 6 5 6 21 6"/>
-              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-              <path d="M10 11v6M14 11v6"/>
-              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-            </svg>
-          </button>
-          <a class="btn-open" href="quiz.html?id=${q.id}">Opne →</a>
+        <div class="quiz-card-footer">
+          <div class="quiz-stats">
+            <div class="quiz-stat">📝 ${q.question_count || 0} spørsmål</div>
+            <div class="quiz-stat">👥 ${q.session_count  || 0} økter</div>
+          </div>
+          <div class="quiz-card-actions">
+            <button class="btn-qr"
+              data-quiz-id="${q.id}"
+              data-quiz-name="${nameEsc}"
+              data-quiz-color="${colorEsc}"
+              data-quiz-ink="${inkEsc}"
+              title="Vis QR-kode">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <rect x="3" y="3" width="7" height="7" rx="1"/>
+                <rect x="14" y="3" width="7" height="7" rx="1"/>
+                <rect x="3" y="14" width="7" height="7" rx="1"/>
+                <path d="M14 14h2v2h-2zM18 14h3M14 18h2M18 18h3M14 22h3M18 22h2"/>
+              </svg>
+            </button>
+            <button class="btn-delete-quiz"
+              data-quiz-id="${q.id}"
+              data-quiz-name="${nameEsc}"
+              title="Slett quiz">
+              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <polyline points="3 6 5 6 21 6"/>
+                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+                <path d="M10 11v6M14 11v6"/>
+                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+              </svg>
+            </button>
+            <a class="btn-open" href="quiz.html?id=${q.id}">Opne →</a>
+          </div>
         </div>
       </div>`
 
@@ -184,7 +206,7 @@ function renderQuizzes(list) {
     card.querySelector('.btn-qr').addEventListener('click', (e) => {
       e.stopPropagation()
       const b = e.currentTarget
-      openQrModal(b.dataset.quizId, b.dataset.quizName, b.dataset.quizEmoji)
+      openQrModal(b.dataset.quizId, b.dataset.quizName, b.dataset.quizColor, b.dataset.quizInk)
     })
     card.querySelector('.btn-delete-quiz').addEventListener('click', (e) => {
       e.stopPropagation()
@@ -200,7 +222,6 @@ function renderQuizzes(list) {
 function updateStats(list) {
   document.getElementById('statTotal').textContent  = list.length
   document.getElementById('statActive').textContent = list.filter(q => q.status === 'active').length
-  document.getElementById('statDraft').textContent  = list.filter(q => !q.status || q.status === 'draft').length
 }
 
 // ── SEARCH ──
@@ -223,15 +244,23 @@ function closeModalIfBg(e) {
 }
 
 // ── QR MODAL ──
-function openQrModal(quizId, quizName, emoji) {
+function openQrModal(quizId, quizName, bgColor, inkColor) {
   activeQrQuizId = quizId
 
-  document.getElementById('qrModalTitle').textContent = (emoji || '🎯') + ' ' + quizName
+  // Bruk farge i tittelen som ein liten fargeprikk
+  const titleEl = document.getElementById('qrModalTitle')
+  titleEl.innerHTML = `<span class="qr-modal-dot" style="background:${bgColor}"></span>${escHtml(quizName)}`
 
   const base  = window.location.origin + window.location.pathname.replace('dashboard.html', '')
   const qrUrl = `${base}QR-scan.html?id=${quizId}`
   document.getElementById('qrUrl').textContent = qrUrl
 
+  // Set bakgrunn på QR-wrapen til quiz-fargen
+  const wrap = document.getElementById('qrCanvasWrap')
+  wrap.style.background = bgColor
+
+  // Bestem QR-modulfarge ut frå kontrast (mørke fargar → lyse moduler funkar dårleg for skanning,
+  // så vi held QR-koden alltid mørk på lys bakgrunn inni eit kvit-kort, og bruker quizfargen som ramme)
   const canvas = document.getElementById('qrCanvas')
   QRCode.toCanvas(canvas, qrUrl, {
     width: 200,
@@ -281,7 +310,6 @@ async function confirmDeleteQuiz() {
   btn.textContent = 'Slettar…'
 
   try {
-    // Spørsmål og sesjonar har ON DELETE CASCADE, så desse vert rydda opp automatisk.
     const { error } = await db.from('quizzes').delete().eq('id', id)
     if (error) throw error
 
@@ -310,7 +338,7 @@ async function createQuiz() {
 
   const newQuiz = {
     name,
-    emoji:          selectedEmoji,
+    color:          selectedColor.bg,
     teacher_id:     currentUser.id,
     status:         'draft',
     created_at:     new Date().toISOString(),
@@ -328,7 +356,7 @@ async function createQuiz() {
     showToast('✅ Quiz oppretta!')
   } catch (err) {
     console.error(err)
-    showToast('❌ Kunne ikkje opprette quiz')
+    showToast('❌ Kunne ikkje opprette quiz: ' + (err.message || ''))
   }
 
   btn.disabled = false

@@ -82,19 +82,6 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
   flex-shrink: 0;
 }
 
-/* Admin-merke i user-chip */
-.admin-badge {
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  background: var(--ink);
-  color: white;
-  border-radius: 99px;
-  padding: 2px 8px;
-  margin-left: 4px;
-}
-
 .logout-btn {
   background: none;
   border: 1.5px solid var(--border);
@@ -147,7 +134,7 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 .btn-create:active { opacity: 0.7; transform: translateY(0); }
 
 /* ── STATS ── */
-.stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 32px; }
+.stats-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 32px; }
 .stat-card { background: var(--card); border: 1.5px solid var(--border); border-radius: 12px; padding: 18px 20px; }
 .stat-label { font-size: 0.72rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 6px; }
 .stat-value { font-family: 'Fraunces', serif; font-size: 1.8rem; font-weight: 900; letter-spacing: -1px; line-height: 1; }
@@ -179,10 +166,9 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
   background: var(--card);
   border: 1.5px solid var(--border);
   border-radius: 14px;
-  padding: 22px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
-  gap: 14px;
   cursor: pointer;
   transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
   color: inherit;
@@ -191,27 +177,43 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 .quiz-card:hover  { border-color: var(--ink); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(0,0,0,0.07); }
 .quiz-card:active { transform: translateY(0); box-shadow: none; }
 
-.quiz-card-top { display: flex; align-items: flex-start; justify-content: space-between; }
-.quiz-emoji    { font-size: 1.6rem; line-height: 1; }
+/* Fargeband øvst på kortet – syner quizfargen tydeleg */
+.quiz-color-band {
+  padding: 22px 22px 18px;
+  font-family: 'Fraunces', serif;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  min-height: 72px;
+}
+.quiz-color-name {
+  word-break: break-word;
+}
 
-.quiz-badge { font-size: 0.68rem; font-weight: 600; padding: 3px 9px; border-radius: 99px; text-transform: uppercase; letter-spacing: 0.05em; }
-.badge-draft  { background: #f1f1ef; color: var(--muted); }
-.badge-active { background: #f0fff4; color: #16a34a; border: 1px solid #bbf7d0; }
+.quiz-card-body {
+  padding: 14px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex: 1;
+}
 
-.quiz-name { font-family: 'Fraunces', serif; font-size: 1.05rem; font-weight: 700; letter-spacing: -0.3px; line-height: 1.2; }
 .quiz-meta { font-size: 0.75rem; color: var(--muted); }
 
 /* Eigar-line (synleg for admin på quizzar som ikkje er deira eigne) */
 .quiz-owner {
   font-size: 0.7rem;
   color: var(--muted);
-  margin-top: 4px;
   display: inline-block;
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 2px 8px;
   font-weight: 500;
+  width: fit-content;
 }
 
 .quiz-card-footer {
@@ -221,6 +223,7 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
   padding-top: 12px;
   border-top: 1px solid var(--border);
   gap: 8px;
+  margin-top: auto;
 }
 .quiz-stats { display: flex; gap: 12px; }
 .quiz-stat  { display: flex; align-items: center; gap: 4px; font-size: 0.72rem; color: var(--muted); font-weight: 500; }
@@ -335,7 +338,16 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
   margin: 0 auto 24px;
 }
 
-.modal-title { font-family: 'Fraunces', serif; font-size: 1.3rem; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 4px; }
+.modal-title {
+  font-family: 'Fraunces', serif;
+  font-size: 1.3rem;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
 .modal-desc  { font-size: 0.78rem; color: var(--muted); margin-bottom: 20px; line-height: 1.5; }
 
 .modal-form  { display: flex; flex-direction: column; gap: 16px; }
@@ -355,22 +367,43 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 }
 .modal-field input:focus { border-color: var(--ink); background: white; }
 
-.emoji-grid { display: flex; flex-wrap: wrap; gap: 8px; }
-.emoji-btn {
-  width: 42px; height: 42px;
-  border: 1.5px solid var(--border);
+/* ── FARGEVELGER ── */
+.color-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 8px;
+}
+.color-btn {
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  border: 2.5px solid transparent;
   border-radius: 10px;
-  background: var(--bg);
-  font-size: 1.2rem;
   cursor: pointer;
+  padding: 0;
+  transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+  -webkit-tap-highlight-color: transparent;
+  position: relative;
+}
+.color-btn:hover {
+  transform: scale(1.08);
+  box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+}
+.color-btn.selected {
+  border-color: var(--ink);
+  transform: scale(1.05);
+}
+.color-btn.selected::after {
+  content: '✓';
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.12s;
-  -webkit-tap-highlight-color: transparent;
+  color: white;
+  font-weight: 900;
+  font-size: 0.95rem;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.45);
 }
-.emoji-btn:hover,
-.emoji-btn.selected { border-color: var(--ink); background: white; }
 
 .modal-actions { display: flex; gap: 10px; }
 
@@ -425,6 +458,16 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 /* ── QR MODAL SPESIFIKT ── */
 .qr-modal { max-width: 360px; }
 
+/* Liten fargeprikk i QR-modal-tittelen */
+.qr-modal-dot {
+  display: inline-block;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid var(--border);
+  flex-shrink: 0;
+}
+
 .qr-canvas-wrap {
   display: flex;
   justify-content: center;
@@ -433,8 +476,13 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
   border-radius: 14px;
   padding: 20px;
   margin-bottom: 10px;
+  transition: background 0.2s;
 }
-.qr-canvas-wrap canvas { border-radius: 6px; }
+.qr-canvas-wrap canvas {
+  border-radius: 6px;
+  background: white;
+  padding: 12px;
+}
 
 .qr-url {
   font-size: 0.65rem;
@@ -476,7 +524,7 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
   .modal-overlay { align-items: center; padding: 16px; }
   .modal {
     border-radius: 16px;
-    max-width: 440px;
+    max-width: 460px;
     padding: 32px 28px;
     transform: translateY(16px);
   }
@@ -493,11 +541,6 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
   .topbar { padding: 0 16px; height: 56px; }
   .user-chip { padding: 5px; border-radius: 50%; }
   .user-chip span { display: none; }
-  .admin-badge {
-    position: absolute;
-    /* På mobil er user-chip rund – skjul tekst-merke for å spare plass */
-    display: none;
-  }
   .logout-btn { padding: 7px 10px; font-size: 0.72rem; }
   /* Gøym tekst på QR-knappen, vis berre ikon */
   .qr-scan-btn span { display: none; }
@@ -510,12 +553,15 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
   .btn-create { width: 100%; justify-content: center; padding: 14px; font-size: 1rem; border-radius: 12px; }
 
   .stats-row { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px; }
-  .stats-row .stat-card:last-child { display: none; }
   .stat-value { font-size: 1.5rem; }
 
   .section-header { flex-direction: column; align-items: flex-start; gap: 10px; }
   .search-input   { width: 100%; font-size: 1rem; padding: 10px 14px; }
 
   .quiz-grid { grid-template-columns: 1fr; gap: 12px; }
+
+  /* Fargevelger på mobil – litt færre i breidda for større fingertreff */
+  .color-grid { grid-template-columns: repeat(6, 1fr); gap: 10px; }
+
   .toast { bottom: 24px; max-width: calc(100vw - 32px); white-space: normal; text-align: center; }
 }

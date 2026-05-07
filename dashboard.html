@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>QuizApp – Dashboard</title>
+  <title>Stord Quiz – Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <!-- QR-kode-generator (for å lage QR frå dashboard) -->
   <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
@@ -15,7 +15,7 @@
 
   <!-- TOPBAR -->
   <header class="topbar">
-    <a href="dashboard.html" class="topbar-logo">QuizApp</a>
+    <a href="dashboard.html" class="topbar-logo">Stord Quiz</a>
     <div class="topbar-right">
       <!-- QR-skann-knapp -->
       <a href="QR-scan.html" class="qr-scan-btn" title="Skann QR-kode">
@@ -60,10 +60,6 @@
         <div class="stat-label">Aktive</div>
         <div class="stat-value" id="statActive">–</div>
       </div>
-      <div class="stat-card">
-        <div class="stat-label">Kladdar</div>
-        <div class="stat-value" id="statDraft">–</div>
-      </div>
     </div>
 
     <div class="section-header">
@@ -81,15 +77,15 @@
   <div class="modal-overlay" id="modalOverlay" onclick="closeModalIfBg(event)">
     <div class="modal">
       <div class="modal-title">Ny quiz</div>
-      <div class="modal-desc">Gje quizen eit namn og eit ikon – du legg til spørsmål etterpå.</div>
+      <div class="modal-desc">Gje quizen eit namn og vel ein farge – du legg til spørsmål etterpå.</div>
       <div class="modal-form">
         <div class="modal-field">
           <label>Namn</label>
           <input type="text" id="newName" placeholder="t.d. Norgesgeografi 6B" maxlength="60" />
         </div>
         <div class="modal-field">
-          <label>Ikon</label>
-          <div class="emoji-grid" id="emojiGrid"></div>
+          <label>Farge</label>
+          <div class="color-grid" id="colorGrid"></div>
         </div>
         <div class="modal-actions">
           <button class="btn-cancel" onclick="closeModal()">Avbryt</button>
@@ -104,7 +100,7 @@
     <div class="modal qr-modal">
       <div class="modal-title" id="qrModalTitle">QR-kode</div>
       <div class="modal-desc">Del denne QR-koden med elevane – dei skannar for å kome til quizen</div>
-      <div class="qr-canvas-wrap">
+      <div class="qr-canvas-wrap" id="qrCanvasWrap">
         <canvas id="qrCanvas"></canvas>
       </div>
       <div class="qr-url" id="qrUrl"></div>
