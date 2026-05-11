@@ -67,8 +67,7 @@ async function forgotPassword() {
 // ── Allereie innlogga? ──
 db.auth.getSession().then(({ data }) => {
   if (data.session) {
-      console.log("Bruker er allerede innlogget!");
-      // window.location.href = 'dashboard.html' 
+    window.location.href = 'dashboard.html'
   }
 })
 
