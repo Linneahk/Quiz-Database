@@ -352,32 +352,31 @@ function generateQR(q) {
 }
 
 // ── PRINT ──
+// Reine fargekort med berre QR-kode. Ingen tekst.
+// Stipla klippelinjer rundt kvart kort så ein kan klippe ut.
+// 2 kolonner × 3 rader = 6 kort per A4-side.
 function printQR() {
   const saved = questions.filter(q => q._saved && q.id)
   if (saved.length === 0) return showToast('⚠️ Lagre minst eitt spørsmål fyrst')
 
   // Hent quiz-farge for print – fallback til lime
-  const color    = findColor(currentQuiz && currentQuiz.color ? currentQuiz.color : COLORS[0].bg)
-  const bgColor  = color.bg
-  const inkColor = color.ink
+  const color   = findColor(currentQuiz && currentQuiz.color ? currentQuiz.color : COLORS[0].bg)
+  const bgColor = color.bg
 
   const printArea = document.getElementById('printArea')
-  printArea.style.display = 'block'
-
-  // Set CSS-variablar slik at print-stil-arket kan bruke fargane
-  printArea.style.setProperty('--print-bg',  bgColor)
-  printArea.style.setProperty('--print-ink', inkColor)
+  // VIKTIG: behaldast skjult på skjermen – berre synleg ved utskrift via @media print
+  printArea.style.display = ''
+  printArea.classList.add('print-mode')
 
   printArea.innerHTML = `
     <div class="print-grid">
-      ${saved.map((q, i) => `
-        <div class="print-card" style="background:${bgColor}; color:${inkColor}; border-color:${inkColor}">
-          <div class="print-card-num" style="color:${inkColor}">Spørsmål ${i + 1}</div>
-          <div class="print-card-q" style="color:${inkColor}; opacity:.85">${esc(q.question_text)}</div>
-          <div class="print-card-qr-wrap">
-            <div class="print-card-qr" id="print-qr-${q.id}"></div>
+      ${saved.map(q => `
+        <div class="print-card-wrap">
+          <div class="print-card" style="background:${bgColor}">
+            <div class="print-card-qr-wrap">
+              <div class="print-card-qr" id="print-qr-${q.id}"></div>
+            </div>
           </div>
-          <div class="print-card-hint" style="color:${inkColor}; opacity:.7">Skann QR-koden for å svare</div>
         </div>
       `).join('')}
     </div>`
@@ -385,15 +384,20 @@ function printQR() {
   saved.forEach(q => {
     new QRCode(document.getElementById(`print-qr-${q.id}`), {
       text:         `${BASE_URL}?id=${q.id}`,
-      width:        120,
-      height:       120,
+      width:        160,
+      height:       160,
       colorDark:    '#000000',
       colorLight:   '#ffffff',
       correctLevel: QRCode.CorrectLevel.M
     })
   })
 
-  setTimeout(() => { window.print(); printArea.style.display = 'none' }, 400)
+  setTimeout(() => {
+    window.print()
+    // Rydd opp etter utskrift
+    printArea.classList.remove('print-mode')
+    printArea.innerHTML = ''
+  }, 400)
 }
 
 // ── TOAST ──
