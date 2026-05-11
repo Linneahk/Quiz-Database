@@ -233,49 +233,6 @@
     .btn-primary:hover { opacity: 0.85; }
 
     /* DIVIDER */
-    .divider {
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      width: 100%;
-      color: var(--muted);
-      font-size: 0.72rem;
-    }
-    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-
-    /* MANUAL INPUT */
-    .manual-row { display: flex; gap: 8px; width: 100%; }
-    .manual-input {
-      flex: 1;
-      padding: 11px 14px;
-      border: 1.5px solid var(--border);
-      border-radius: 8px;
-      font-family: 'Epilogue', sans-serif;
-      font-size: 0.9rem;
-      color: var(--ink);
-      background: var(--bg);
-      outline: none;
-      transition: border-color 0.15s;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-    .manual-input:focus { border-color: var(--ink); background: white; }
-    .manual-input::placeholder { color: #c0c0bc; text-transform: none; letter-spacing: 0; }
-    .manual-btn {
-      padding: 11px 18px;
-      border: none;
-      border-radius: 8px;
-      background: var(--ink);
-      color: white;
-      font-family: 'Fraunces', serif;
-      font-size: 0.9rem;
-      font-weight: 700;
-      cursor: pointer;
-      transition: opacity 0.15s;
-      white-space: nowrap;
-    }
-    .manual-btn:hover { opacity: 0.85; }
-
     /* LOCAL SPINNER */
     .spin-sm {
       display: inline-block;
@@ -339,12 +296,7 @@
       </div>
     </div>
 
-    <!-- MANUAL INPUT -->
-    <div class="divider">eller skriv inn quiz-ID manuelt</div>
-    <div class="manual-row">
-      <input class="manual-input" type="text" id="manualCode" placeholder="Lim inn quiz-ID" maxlength="40" />
-      <button class="manual-btn" onclick="lookupManual()">Søk</button>
-    </div>
+
   </div>
 
   <script>
@@ -434,21 +386,11 @@
       if (scanner) scanner.clear().catch(() => {})
     }
 
-    // ── MANUAL ──
-    async function lookupManual() {
-      const raw = document.getElementById('manualCode').value.trim()
-      if (!raw) return
-      scanDone = true
-      showStatus('<span class="spin-sm"></span> Søkjer…', 'info')
-      await lookupQuiz(raw)
-    }
-
     // ── RESET ──
     function resetScanner() {
       scanDone = false
       document.getElementById('resultCard').classList.remove('visible')
-      document.getElementById('manualCode').value = ''
-      clearStatus()
+clearStatus()
       document.getElementById('qr-reader').innerHTML = ''
       initScanner()
     }
@@ -464,10 +406,6 @@
       el.className = 'status-msg'
       el.innerHTML = ''
     }
-
-    document.getElementById('manualCode').addEventListener('keydown', e => {
-      if (e.key === 'Enter') lookupManual()
-    })
 
     initScanner()
   </script>
