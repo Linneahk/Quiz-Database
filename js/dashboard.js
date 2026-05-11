@@ -143,23 +143,12 @@ function renderQuizzes(list) {
     const colorEsc = escAttr(bgColor)
     const inkEsc   = escAttr(inkColor)
 
-    // Eigar-line (berre admin ser dette på andre sine quizzar)
-    let ownerLine = ''
-    if (isAdmin && q.teacher_id !== currentUser.id) {
-      const t = teachersById[q.teacher_id]
-      const ownerLabel = t
-        ? (t.full_name || t.email || 'Ukjend lærar')
-        : 'Ukjend lærar'
-      ownerLine = `<div class="quiz-owner">👤 ${escHtml(ownerLabel)}</div>`
-    }
-
     card.innerHTML = `
       <div class="quiz-color-band" style="background:${bgColor}; color:${inkColor}">
         <span class="quiz-color-name">${escHtml(q.name)}</span>
       </div>
       <div class="quiz-card-body">
         <div class="quiz-meta">Oppretta ${date}</div>
-        ${ownerLine}
         <div class="quiz-card-footer">
           <div class="quiz-stats">
             <div class="quiz-stat">📝 ${q.question_count || 0} spørsmål</div>
