@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stord Quiz – Host</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,900;1,700&family=Epilogue:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0f0f13;--surface:#1a1a24;--border:#2a2a3a;--accent:#c8f050;--accent2:#7c6cff;--text:#f0f0f5;--muted:#7a7a9a;--red:#ff4d6d;--blue:#4d9fff;--green:#50f0a0;--yellow:#f0c050;}
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Epilogue',sans-serif;min-height:100vh;}
+
+  /* LOBBY */
+  #lobby{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:1.5rem;gap:0;}
+  .logo{font-family:'Fraunces',serif;font-size:1.3rem;font-weight:900;color:var(--accent);margin-bottom:1.5rem;}
+  .quiz-name{font-family:'Fraunces',serif;font-size:clamp(1.8rem,5vw,3rem);font-weight:900;margin-bottom:.25rem;text-align:center;}
+  .quiz-sub{color:var(--muted);margin-bottom:1.5rem;font-size:.95rem;}
+  .pin-card{background:var(--surface);border:2px solid var(--accent);border-radius:20px;padding:clamp(1.25rem,4vw,2rem) clamp(1.5rem,6vw,3.5rem);text-align:center;margin-bottom:1rem;width:100%;max-width:400px;box-shadow:0 0 40px rgba(200,240,80,.1);}
+  .pin-lbl{font-size:.75rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);margin-bottom:.25rem;}
+  .pin-num{font-family:'Fraunces',serif;font-size:clamp(2.5rem,10vw,4.5rem);font-weight:900;color:var(--accent);letter-spacing:.08em;line-height:1;}
+  .pin-url{color:var(--muted);font-size:.78rem;margin-top:.4rem;word-break:break-all;}
+  .join-hint{color:var(--muted);font-size:.9rem;margin-bottom:1.25rem;text-align:center;}
+  .join-hint strong{color:var(--text);}
+  .players-wrap{display:flex;flex-wrap:wrap;gap:.5rem;justify-content:center;width:100%;max-width:600px;min-height:52px;margin-bottom:.75rem;}
+  .pchip{background:var(--surface);border:1px solid var(--border);border-radius:100px;padding:.4rem 1rem;font-size:.88rem;font-weight:500;display:flex;align-items:center;gap:.4rem;animation:pop .3s cubic-bezier(.34,1.56,.64,1);}
+  @keyframes pop{from{transform:scale(.5);opacity:0;}to{transform:scale(1);opacity:1;}}
+  .pdot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .pcount{color:var(--muted);font-size:.85rem;margin-bottom:.25rem;text-align:center;}
+  .rtstat{font-size:.72rem;color:var(--muted);margin-bottom:1rem;}
+  .btn-start{background:var(--accent);color:#0f0f13;border:none;border-radius:14px;padding:.9rem 2.5rem;font-family:'Fraunces',serif;font-size:1.1rem;font-weight:700;cursor:pointer;transition:transform .15s,box-shadow .15s;width:100%;max-width:260px;box-shadow:0 4px 20px rgba(200,240,80,.25);}
+  .btn-start:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(200,240,80,.35);}
+  .btn-start:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+
+  /* GAME */
+  #game{display:none;min-height:100vh;padding:1rem;flex-direction:column;gap:.75rem;}
+  .gbar{display:flex;align-items:center;justify-content:space-between;gap:.75rem;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:.75rem 1rem;flex-shrink:0;}
+  .gctr{font-family:'Fraunces',serif;font-weight:700;font-size:.95rem;white-space:nowrap;}
+  .ring{position:relative;width:52px;height:52px;flex-shrink:0;}
+  .ring svg{transform:rotate(-90deg);}
+  .ring circle{fill:none;stroke-width:4;stroke-linecap:round;}
+  .rbg{stroke:var(--border);}
+  .rfg{stroke:var(--accent);transition:stroke-dashoffset 1s linear,stroke .3s;}
+  .rnum{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:'Fraunces',serif;font-weight:900;font-size:1rem;}
+  .abadge{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.3rem .6rem;font-size:.8rem;color:var(--muted);white-space:nowrap;}
+  .qbox{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem;text-align:center;flex:1;min-height:100px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.75rem;}
+  .qbox-img{max-width:100%;max-height:180px;border-radius:10px;object-fit:cover;}
+  .qtext{font-family:'Fraunces',serif;font-size:clamp(1.1rem,3vw,1.8rem);font-weight:700;line-height:1.4;}
+  .agrid{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;flex-shrink:0;}
+  .abtn{border:none;border-radius:14px;padding:1rem .75rem;font-family:'Fraunces',serif;font-size:clamp(.85rem,2vw,1rem);font-weight:700;color:#fff;cursor:default;text-align:center;display:flex;align-items:center;justify-content:center;gap:.5rem;min-height:68px;word-break:break-word;}
+  .abtn.a{background:var(--red);}.abtn.b{background:var(--blue);}.abtn.c{background:var(--green);color:#0f0f13;}.abtn.d{background:var(--yellow);color:#0f0f13;}
+  .ashape{font-size:1.1rem;flex-shrink:0;}
+  .gfoot{display:flex;align-items:center;justify-content:space-between;gap:1rem;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:.75rem 1rem;flex-shrink:0;flex-wrap:wrap;}
+  .acnt{font-size:.9rem;color:var(--muted);}
+  .acnt span{color:var(--accent);font-weight:700;}
+  .btn-next{background:var(--accent2);color:#fff;border:none;border-radius:10px;padding:.6rem 1.5rem;font-family:'Fraunces',serif;font-weight:700;font-size:.95rem;cursor:pointer;transition:opacity .2s;white-space:nowrap;}
+  .btn-next:hover{opacity:.85;}
+
+  /* RESULTS */
+  #results{display:none;min-height:100vh;padding:1.5rem;flex-direction:column;align-items:center;}
+  .rtitle{font-family:'Fraunces',serif;font-size:clamp(1.8rem,5vw,2.5rem);font-weight:900;margin-bottom:.5rem;text-align:center;}
+  .rsub{color:var(--muted);margin-bottom:2rem;text-align:center;}
+  .lb{width:100%;max-width:560px;}
+  .lbrow{display:flex;align-items:center;gap:.75rem;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.9rem 1.25rem;margin-bottom:.6rem;animation:slide .4s ease both;}
+  .lbrow:nth-child(1){border-color:var(--yellow);}.lbrow:nth-child(2){border-color:var(--muted);}.lbrow:nth-child(3){border-color:#cd7f32;}
+  @keyframes slide{from{transform:translateX(-20px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+  .lbrank{font-family:'Fraunces',serif;font-weight:900;font-size:1.2rem;width:28px;text-align:center;flex-shrink:0;}
+  .lbname{flex:1;font-weight:600;font-size:1rem;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .lbscore{font-family:'Fraunces',serif;font-weight:900;font-size:1.1rem;color:var(--accent);flex-shrink:0;}
+  .btn-end{margin-top:1.5rem;background:var(--red);color:#fff;border:none;border-radius:12px;padding:.8rem 2rem;font-family:'Fraunces',serif;font-weight:700;font-size:1rem;cursor:pointer;}
+
+  .hidden{display:none!important;}
+  .spinner{width:22px;height:22px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  .toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.7rem 1.25rem;font-size:.9rem;z-index:999;white-space:nowrap;max-width:90vw;text-align:center;}
+  @media(max-width:480px){.agrid{gap:.5rem;}.abtn{min-height:60px;padding:.75rem .5rem;font-size:.8rem;}.ashape{display:none;}}
+</style>
+</head>
+<body>
+
+<!-- LOBBY -->
+<div id="lobby">
+  <div id="lobby-loading" style="display:flex;flex-direction:column;align-items:center;gap:1rem;">
+    <div class="spinner"></div>
+    <p style="color:var(--muted)">Laster quiz…</p>
+  </div>
+
+  <div id="lobby-content" class="hidden" style="display:flex;flex-direction:column;align-items:center;width:100%;max-width:660px;">
+    <div class="logo">Stord Quiz</div>
+    <p style="color:var(--muted);margin-bottom:.25rem;">🎮 Quiz klar til å starte</p>
+    <h1 class="quiz-name" id="quiz-name">Quiz</h1>
+    <p class="quiz-sub" id="quiz-qcount"></p>
+
+    <div class="pin-card">
+      <div class="pin-lbl">Bli med på</div>
+      <div class="pin-num" id="pin-num">––––––</div>
+      <div class="pin-url" id="pin-url"></div>
+    </div>
+
+    <p class="join-hint">Gå til <strong id="join-url-text"></strong> og skriv inn PIN-koden</p>
+
+    <div class="players-wrap" id="players-wrap">
+      <p style="color:var(--muted);font-size:.85rem;">Ventar på spelarar…</p>
+    </div>
+    <p class="pcount" id="pcount">0 spelarar tilkobla</p>
+    <p class="rtstat" id="rtstat">⏳ Kobler til realtime…</p>
+
+    <button class="btn-start" id="btn-start" onclick="startGame()">Start quiz →</button>
+  </div>
+</div>
+
+<!-- GAME -->
+<div id="game">
+  <div class="gbar">
+    <span class="gctr" id="gctr">Spørsmål 1/10</span>
+    <div class="ring">
+      <svg width="52" height="52" viewBox="0 0 52 52">
+        <circle class="rbg" cx="26" cy="26" r="22"/>
+        <circle class="rfg" id="rfg" cx="26" cy="26" r="22" stroke-dasharray="138.2" stroke-dashoffset="0"/>
+      </svg>
+      <div class="rnum" id="rnum">20</div>
+    </div>
+    <div class="abadge" id="abadge">0 svar</div>
+  </div>
+
+  <div class="qbox">
+    <img id="host-qimg" class="qbox-img hidden" alt="">
+    <p class="qtext" id="qtext">Laster spørsmål…</p>
+  </div>
+
+  <div class="agrid">
+    <div class="abtn a"><span class="ashape">▲</span><span id="oa"></span></div>
+    <div class="abtn b"><span class="ashape">◆</span><span id="ob"></span></div>
+    <div class="abtn c"><span class="ashape">●</span><span id="oc"></span></div>
+    <div class="abtn d"><span class="ashape">■</span><span id="od"></span></div>
+  </div>
+
+  <div class="gfoot">
+    <p class="acnt"><span id="ans-in">0</span> av <span id="ans-tot">0</span> har svart</p>
+    <button class="btn-next" onclick="nextQ()">Neste →</button>
+  </div>
+</div>
+
+<!-- RESULTS -->
+<div id="results">
+  <p style="color:var(--muted);margin-bottom:.5rem;">🏆 Quiz ferdig!</p>
+  <h1 class="rtitle">Sluttresultat</h1>
+  <p class="rsub" id="rsub"></p>
+  <div class="lb" id="lb"></div>
+  <button class="btn-end" onclick="location.href='dashboard.html'">← Tilbake til dashboard</button>
+</div>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+const SUPABASE_URL = 'https://owgldsfxpmzpkipgeksr.supabase.co'
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93Z2xkc2Z4cG16cGtpcGdla3NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4MDM2NTYsImV4cCI6MjA5MjM3OTY1Nn0.bD5dNHcQfjjq29DprTnVafxuZeCvt30zu0qQItq6AXY'
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+const params  = new URLSearchParams(location.search)
+const quizId  = params.get('quiz')
+let sessionId = null, questions = [], curIdx = 0, players = [], channel = null, timerInt = null
+
+async function init() {
+  if (!quizId) { toast('Ingen quiz vald – gå tilbake til dashbordet'); return }
+
+  // Must be logged in
+  const { data: { user } } = await sb.auth.getUser()
+  if (!user) { location.href = 'login.html'; return }
+
+  const { data: quiz, error: qe } = await sb.from('quizzes').select('*').eq('id', quizId).single()
+  if (qe || !quiz) { toast('Fann ikkje quizen'); return }
+
+  const { data: qs } = await sb.from('questions').select('*').eq('major_id', quizId).order('order', { ascending: true })
+  questions = qs || []
+
+  // Create session
+  const pin = String(Math.floor(100000 + Math.random() * 900000))
+  const { data: sess, error: se } = await sb.from('sessions').insert({
+    quiz_id: quizId, join_code: pin, status: 'waiting', host_id: user.id
+  }).select().single()
+  if (se) { toast('Kunne ikkje opprette økt: ' + se.message); return }
+  sessionId = sess.id
+
+  // Update session count
+  await sb.from('quizzes').update({ session_count: (quiz.session_count || 0) + 1 }).eq('id', quizId)
+
+  // Show lobby
+  document.getElementById('lobby-loading').style.display = 'none'
+  const lc = document.getElementById('lobby-content')
+  lc.classList.remove('hidden'); lc.style.display = 'flex'
+  document.getElementById('quiz-name').textContent    = quiz.name
+  document.getElementById('quiz-qcount').textContent  = `${questions.length} spørsmål`
+  document.getElementById('pin-num').textContent      = pin
+
+  const base = location.origin + location.pathname.replace('host.html', '')
+  document.getElementById('pin-url').textContent      = base
+  document.getElementById('join-url-text').textContent = base
+
+  // Realtime
+  channel = sb.channel('session:' + sessionId)
+
+  channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'session_players', filter: `session_id=eq.${sessionId}` }, (payload) => {
+    players.push(payload.new)
+    renderPlayers()
+  })
+
+  channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'session_answers', filter: `session_id=eq.${sessionId}` }, () => {
+    const el = document.getElementById('ans-in')
+    if (el) el.textContent = parseInt(el.textContent || 0) + 1
+  })
+
+  channel.subscribe((status, err) => {
+    const el = document.getElementById('rtstat')
+    if (status === 'SUBSCRIBED') {
+      el.textContent = '🟢 Realtime tilkobla'
+      el.style.color = 'var(--accent)'
+    } else if (status === 'CHANNEL_ERROR') {
+      el.textContent = '🔴 Realtime feil – last sida på nytt'
+      el.style.color = 'var(--red)'
+      console.error('[RT]', err)
+    }
+  })
+}
+
+function renderPlayers() {
+  const wrap = document.getElementById('players-wrap')
+  wrap.innerHTML = players.length === 0
+    ? '<p style="color:var(--muted);font-size:.85rem;">Ventar på spelarar…</p>'
+    : players.map(p => `<div class="pchip"><div class="pdot" style="background:${p.avatar_color}"></div>${p.nickname}</div>`).join('')
+  document.getElementById('pcount').textContent = `${players.length} spelar${players.length !== 1 ? 'ar' : ''} tilkobla`
+}
+
+window.startGame = async function() {
+  if (players.length === 0) return toast('Ingen spelarar enno!')
+  if (questions.length === 0) return toast('Quizen har ingen spørsmål!')
+  await sb.from('sessions').update({ status: 'active', started_at: new Date().toISOString() }).eq('id', sessionId)
+  await channel.send({ type: 'broadcast', event: 'game_start', payload: { session_id: sessionId } })
+  document.getElementById('lobby').style.display = 'none'
+  document.getElementById('game').style.display = 'flex'
+  showQ(0)
+}
+
+function showQ(idx) {
+  curIdx = idx
+  const q = questions[idx]
+  const opts = Array.isArray(q.options) ? q.options : JSON.parse(q.options || '[]')
+  document.getElementById('gctr').textContent = `Spørsmål ${idx + 1}/${questions.length}`
+  document.getElementById('qtext').textContent = q.question_text
+  const img = document.getElementById('host-qimg')
+  if (q.image_url) { img.src = q.image_url; img.classList.remove('hidden') } else { img.classList.add('hidden') }
+  document.getElementById('oa').textContent = opts[0] || ''
+  document.getElementById('ob').textContent = opts[1] || ''
+  document.getElementById('oc').textContent = opts[2] || ''
+  document.getElementById('od').textContent = opts[3] || ''
+  document.getElementById('ans-in').textContent = '0'
+  document.getElementById('ans-tot').textContent = players.length
+  channel.send({ type: 'broadcast', event: 'question', payload: { index: idx, question: q.question_text, options: opts, time_limit: q.time_limit || 20, image_url: q.image_url || null } })
+  startTimer(q.time_limit || 20)
+}
+
+function startTimer(secs) {
+  clearInterval(timerInt)
+  let rem = secs
+  const circ = document.getElementById('rfg'), num = document.getElementById('rnum'), C = 138.2
+  function tick() {
+    num.textContent = rem
+    circ.style.strokeDashoffset = C * (1 - rem / secs)
+    circ.style.stroke = rem <= 5 ? 'var(--red)' : 'var(--accent)'
+    if (rem <= 0) { clearInterval(timerInt); channel.send({ type: 'broadcast', event: 'time_up', payload: { index: curIdx } }) }
+    rem--
+  }
+  tick(); timerInt = setInterval(tick, 1000)
+}
+
+window.nextQ = async function() {
+  clearInterval(timerInt)
+  if (curIdx + 1 >= questions.length) await endGame()
+  else showQ(curIdx + 1)
+}
+
+async function endGame() {
+  await sb.from('sessions').update({ status: 'finished', ended_at: new Date().toISOString() }).eq('id', sessionId)
+  await channel.send({ type: 'broadcast', event: 'game_over', payload: {} })
+  const { data: scores } = await sb.from('session_players').select('nickname,total_score,avatar_color').eq('session_id', sessionId).order('total_score', { ascending: false })
+  document.getElementById('game').style.display = 'none'
+  document.getElementById('results').style.display = 'flex'
+  document.getElementById('rsub').textContent = `${scores?.length || 0} spelarar fullførte`
+  const M = ['🥇','🥈','🥉']
+  document.getElementById('lb').innerHTML = (scores || []).map((p, i) => `
+    <div class="lbrow" style="animation-delay:${i * .08}s">
+      <span class="lbrank">${M[i] || i + 1}</span>
+      <div class="pdot" style="width:11px;height:11px;border-radius:50%;background:${p.avatar_color}"></div>
+      <span class="lbname">${p.nickname}</span>
+      <span class="lbscore">${p.total_score.toLocaleString('no')}</span>
+    </div>`).join('')
+}
+
+function toast(msg) {
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg
+  document.body.appendChild(t); setTimeout(() => t.remove(), 3000)
+}
+
+init()
+</script>
+</body>
+</html>
