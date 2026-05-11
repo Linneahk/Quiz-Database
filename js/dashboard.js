@@ -40,7 +40,7 @@ function findColor(bg) {
 // ── INIT ──
 async function init() {
   const { data } = await db.auth.getSession()
-  if (!data.session) { window.location.href = 'index.html'; return }
+  if (!data.session) { window.location.href = 'login.html'; return }
 
   currentUser = data.session.user
   document.getElementById('userEmail').textContent   = currentUser.email.split('@')[0]
@@ -374,7 +374,7 @@ function showToast(msg) {
 // ── LOGOUT ──
 async function logout() {
   await db.auth.signOut()
-  window.location.href = 'index.html'
+  window.location.href = 'login.html'
 }
 
 // ── ESCAPE HELPERS ──
