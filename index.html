@@ -1,39 +1,233 @@
 <!DOCTYPE html>
 <html lang="no">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Stord Quiz – Logg inn</title>
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@700;900&family=Epilogue:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Stord Quiz – Bli med</title>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,900;1,700&family=Epilogue:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#0f0f13;--surface:#1a1a24;--border:#2a2a3a;--accent:#c8f050;--text:#f0f0f5;--muted:#7a7a9a;--red:#ff4d6d;--blue:#4d9fff;--green:#50f0a0;--yellow:#f0c050;}
+  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Epilogue',sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:1.25rem;}
+  .screen{width:100%;max-width:420px;display:flex;flex-direction:column;align-items:center;text-align:center;}
+  .screen.hidden{display:none!important;}
+  #q-screen{max-width:100%!important;}
+  .logo{font-family:'Fraunces',serif;font-size:1.4rem;font-weight:900;color:var(--accent);margin-bottom:2rem;}
+  h1{font-family:'Fraunces',serif;font-size:clamp(1.8rem,7vw,2.2rem);font-weight:900;margin-bottom:.4rem;line-height:1.1;}
+  .sub{color:var(--muted);margin-bottom:1.75rem;font-size:.95rem;}
+  .iw{width:100%;margin-bottom:1rem;}
+  input{width:100%;background:var(--surface);border:2px solid var(--border);border-radius:14px;padding:.9rem 1rem;font-family:'Fraunces',serif;font-size:clamp(1.4rem,7vw,1.8rem);font-weight:700;color:var(--text);text-align:center;letter-spacing:.12em;outline:none;transition:border-color .2s;-moz-appearance:textfield;}
+  input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;}
+  input:focus{border-color:var(--accent);}
+  input.sm{font-size:clamp(1rem,4vw,1.15rem);letter-spacing:0;}
+  input::placeholder{color:var(--muted);font-weight:400;letter-spacing:0;font-family:'Epilogue',sans-serif;font-size:1rem;}
+  .btn{width:100%;background:var(--accent);color:#0f0f13;border:none;border-radius:14px;padding:.9rem 1rem;font-family:'Fraunces',serif;font-size:clamp(1rem,4vw,1.15rem);font-weight:700;cursor:pointer;transition:transform .15s,opacity .15s;box-shadow:0 4px 20px rgba(200,240,80,.2);}
+  .btn:hover{transform:translateY(-2px);}
+  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+  .btn.ghost{background:var(--surface);color:var(--text);border:1px solid var(--border);box-shadow:none;margin-top:.6rem;}
+  .crow{display:flex;gap:.55rem;justify-content:center;flex-wrap:wrap;margin-bottom:1.25rem;}
+  .cdot{width:30px;height:30px;border-radius:50%;cursor:pointer;border:3px solid transparent;transition:transform .15s,border-color .15s;flex-shrink:0;}
+  .cdot.on{border-color:#fff;transform:scale(1.2);}
+  .pulse{width:72px;height:72px;border-radius:50%;border:3px solid var(--accent);margin:0 auto 1.25rem;animation:pulse 2s ease-in-out infinite;display:flex;align-items:center;justify-content:center;font-size:1.8rem;}
+  @keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(200,240,80,.35);}50%{box-shadow:0 0 0 16px rgba(200,240,80,0);}}
+  .chip{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:.9rem 2rem;margin-top:1.25rem;}
+  .chip .lbl{color:var(--muted);font-size:.8rem;margin-bottom:.2rem;}
+  .chip .nm{font-family:'Fraunces',serif;font-weight:700;font-size:1.2rem;}
+  .qbar{display:flex;align-items:center;gap:.75rem;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:.75rem 1rem;margin-bottom:1rem;}
+  .qn{font-family:'Fraunces',serif;font-weight:700;font-size:.9rem;white-space:nowrap;}
+  .tw{flex:1;height:8px;background:var(--border);border-radius:99px;overflow:hidden;}
+  .tb{height:100%;background:var(--accent);border-radius:99px;transition:width 1s linear,background .3s;}
+  .tn{font-family:'Fraunces',serif;font-weight:700;font-size:1rem;min-width:22px;text-align:right;}
+  .qcard{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:1.5rem;text-align:center;margin-bottom:1rem;}
+  .qcard p{font-family:'Fraunces',serif;font-size:clamp(1.1rem,4vw,1.6rem);font-weight:700;line-height:1.4;}
+  .qimg{width:100%;max-height:200px;object-fit:cover;border-radius:10px;margin-bottom:.75rem;}
+  .opts{display:grid;grid-template-columns:1fr 1fr;gap:.6rem;}
+  .opt{border:none;border-radius:14px;padding:1rem .6rem;min-height:72px;font-family:'Fraunces',serif;font-size:clamp(.85rem,3vw,1rem);font-weight:700;color:#fff;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.3rem;transition:transform .12s,opacity .15s;position:relative;overflow:hidden;word-break:break-word;text-align:center;}
+  .opt:hover:not(:disabled){transform:scale(1.03);}
+  .opt:disabled{cursor:not-allowed;}
+  .opt.a{background:var(--red);}.opt.b{background:var(--blue);}.opt.c{background:var(--green);color:#0f0f13;}.opt.d{background:var(--yellow);color:#0f0f13;}
+  .os{font-size:1.2rem;}
+  .opt.picked{outline:3px solid #fff;transform:scale(1.03);}
+  .opt.correct::after{content:'✓';position:absolute;top:.3rem;right:.5rem;font-size:1rem;}
+  .opt.wrong::after{content:'✗';position:absolute;top:.3rem;right:.5rem;font-size:1rem;}
+  .opt.dim{opacity:.35;}
+  .flash{position:fixed;inset:0;background:rgba(15,15,19,.93);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:100;animation:fi .25s ease;padding:1.5rem;}
+  @keyframes fi{from{opacity:0;}}
+  .flash .big{font-family:'Fraunces',serif;font-size:clamp(3.5rem,15vw,5.5rem);font-weight:900;line-height:1;}
+  .flash .lbl{color:var(--muted);font-size:1rem;margin-top:.4rem;}
+  .flash .pts{font-family:'Fraunces',serif;font-size:1.5rem;font-weight:700;color:var(--accent);margin-top:.75rem;}
+  #final-screen{width:100%;max-width:420px;}
+  .trophy{font-size:clamp(3rem,12vw,5rem);margin-bottom:.75rem;}
+  .fscore{font-family:'Fraunces',serif;font-size:clamp(3rem,13vw,4.5rem);font-weight:900;color:var(--accent);}
+  .tlink{position:fixed;bottom:1.25rem;right:1.25rem;font-size:.75rem;color:var(--muted);text-decoration:none;opacity:.5;transition:opacity .2s;}
+  .tlink:hover{opacity:1;}
+  .toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:.65rem 1.25rem;font-size:.9rem;z-index:999;max-width:90vw;text-align:center;white-space:nowrap;}
+  @media(max-width:360px){.os{display:none;}.opt{min-height:60px;padding:.75rem .4rem;}}
+</style>
 </head>
 <body>
 
-<div class="card">
-
+<div id="pin-screen" class="screen">
   <div class="logo">Stord Quiz</div>
-  <div class="tagline">Administrasjonspanel</div>
-
-  <div class="msg" id="msg"></div>
-
-  <div id="loginForm">
-    <div class="form">
-      <div class="field">
-        <label for="loginEmail">E-post</label>
-        <input type="email" id="loginEmail" placeholder="admin@skule.no" />
-      </div>
-      <div class="field">
-        <label for="loginPassword">Passord</label>
-        <input type="password" id="loginPassword" placeholder="••••••••" />
-      </div>
-      <button class="btn" id="loginBtn" onclick="login()">Logg inn</button>
-      <div class="forgot" onclick="forgotPassword()">Gløymt passord?</div>
-    </div>
+  <h1>Bli med!</h1>
+  <p class="sub">Skriv inn PIN-koden frå læraren</p>
+  <div class="iw">
+    <input id="pin-inp" type="number" placeholder="000000" maxlength="6"
+      oninput="this.value=this.value.slice(0,6)"
+      onkeydown="if(event.key==='Enter')checkPin()">
   </div>
-
+  <button class="btn" onclick="checkPin()">Neste →</button>
 </div>
 
-<script type="module" src="js/app.js"></script>
+<div id="nick-screen" class="screen hidden">
+  <div class="logo">Stord Quiz</div>
+  <h1>Kva heiter du?</h1>
+  <p class="sub">Vel eit kallenamn og farge</p>
+  <div class="iw">
+    <input id="nick-inp" class="sm" type="text" placeholder="Ditt kallenamn" maxlength="20"
+      onkeydown="if(event.key==='Enter')joinGame()">
+  </div>
+  <div class="crow" id="crow"></div>
+  <button class="btn" onclick="joinGame()">Bli med! 🎮</button>
+  <button class="btn ghost" onclick="show('pin-screen')">← Tilbake</button>
+</div>
 
+<div id="wait-screen" class="screen hidden">
+  <div class="logo">Stord Quiz</div>
+  <div class="pulse">🎮</div>
+  <h1 id="wait-name">Quiz</h1>
+  <p class="sub">Du er med! Ventar på at læraren startar…</p>
+  <div class="chip">
+    <div class="lbl">Du spelar som</div>
+    <div class="nm" id="wait-nick"></div>
+  </div>
+</div>
+
+<div id="q-screen" class="screen hidden">
+  <div class="qbar">
+    <span class="qn" id="qn">1/10</span>
+    <div class="tw"><div class="tb" id="tb" style="width:100%"></div></div>
+    <span class="tn" id="tn">20</span>
+  </div>
+  <div class="qcard">
+    <img id="qimg" class="qimg hidden" alt="">
+    <p id="qt">Laster…</p>
+  </div>
+  <div class="opts">
+    <button class="opt a" id="o0" onclick="pick(0)"><span class="os">▲</span><span id="ot0"></span></button>
+    <button class="opt b" id="o1" onclick="pick(1)"><span class="os">◆</span><span id="ot1"></span></button>
+    <button class="opt c" id="o2" onclick="pick(2)"><span class="os">●</span><span id="ot2"></span></button>
+    <button class="opt d" id="o3" onclick="pick(3)"><span class="os">■</span><span id="ot3"></span></button>
+  </div>
+</div>
+
+<div id="final-screen" class="screen hidden">
+  <div class="trophy">🏆</div>
+  <h1>Quiz ferdig!</h1>
+  <div class="fscore" id="fscore">0</div>
+  <p style="color:var(--muted);margin-top:.4rem;">poeng totalt</p>
+  <button class="btn" style="margin-top:2rem;max-width:260px;" onclick="location.reload()">Spel igjen</button>
+</div>
+
+<a href="login.html" class="tlink">Lærar? Logg inn →</a>
+
+<script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+const SUPABASE_URL = 'https://owgldsfxpmzpkipgeksr.supabase.co'
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93Z2xkc2Z4cG16cGtpcGdla3NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4MDM2NTYsImV4cCI6MjA5MjM3OTY1Nn0.bD5dNHcQfjjq29DprTnVafxuZeCvt30zu0qQItq6AXY'
+const sb = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+const COLORS=['#ff4d6d','#4d9fff','#50f0a0','#f0c050','#c8f050','#7c6cff','#ff9f50','#f050c8','#50c8f0','#a0f050']
+let chosenColor=COLORS[0],sessionId=null,quizId=null,playerId=null
+let curQ=null,startMs=null,picked=null,totalScore=0,totalQs=0,timerInt=null,channel=null
+
+const crow=document.getElementById('crow')
+COLORS.forEach((c,i)=>{
+  const d=document.createElement('div')
+  d.className='cdot'+(i===0?' on':''); d.style.background=c
+  d.onclick=()=>{document.querySelectorAll('.cdot').forEach(x=>x.classList.remove('on'));d.classList.add('on');chosenColor=c}
+  crow.appendChild(d)
+})
+
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));document.getElementById(id).classList.remove('hidden')}
+window.show=show
+
+window.checkPin=async function(){
+  const pin=document.getElementById('pin-inp').value.trim()
+  if(pin.length!==6)return toast('PIN må vere 6 siffer')
+  const{data:s}=await sb.from('sessions').select('id,quiz_id,status,quizzes(name,question_count)').eq('join_code',pin).in('status',['waiting','active']).single()
+  if(!s)return toast('Fann ingen aktiv quiz med den PIN-koden')
+  sessionId=s.id; quizId=s.quiz_id; totalQs=s.quizzes?.question_count||0
+  document.getElementById('wait-name').textContent=s.quizzes?.name||'Quiz'
+  show('nick-screen')
+}
+
+window.joinGame=async function(){
+  const nick=document.getElementById('nick-inp').value.trim()
+  if(!nick)return toast('Skriv inn eit kallenamn')
+  const{data:p,error}=await sb.from('session_players').insert({session_id:sessionId,nickname:nick,avatar_color:chosenColor}).select().single()
+  if(error)return toast('Kunne ikkje bli med: '+error.message)
+  playerId=p.id; document.getElementById('wait-nick').textContent=nick
+  show('wait-screen'); subscribe()
+}
+
+function subscribe(){
+  channel=sb.channel('session:'+sessionId)
+  channel.on('broadcast',{event:'question'},({payload})=>showQ(payload))
+  channel.on('broadcast',{event:'time_up'},()=>{clearInterval(timerInt);lockOpts();if(picked===null)flash(0,false)})
+  channel.on('broadcast',{event:'game_over'},()=>{clearInterval(timerInt);show('final-screen');document.getElementById('fscore').textContent=totalScore.toLocaleString('no')})
+  channel.subscribe(s=>console.log('[RT]',s))
+}
+
+function showQ(p){
+  curQ=p; picked=null; startMs=Date.now(); show('q-screen')
+  document.getElementById('qn').textContent=`${p.index+1}/${totalQs||'?'}`
+  document.getElementById('qt').textContent=p.question
+  const img=document.getElementById('qimg')
+  if(p.image_url){img.src=p.image_url;img.classList.remove('hidden')}else{img.classList.add('hidden')}
+  ;(p.options||[]).forEach((t,i)=>{
+    document.getElementById('ot'+i).textContent=t
+    const b=document.getElementById('o'+i); b.disabled=false; b.classList.remove('picked','correct','wrong','dim')
+  })
+  startTimer(p.time_limit||20)
+}
+
+function startTimer(secs){
+  clearInterval(timerInt); let rem=secs
+  const bar=document.getElementById('tb'),num=document.getElementById('tn')
+  function tick(){num.textContent=rem;bar.style.width=(rem/secs*100)+'%';bar.style.background=rem<=5?'var(--red)':'var(--accent)';if(rem<=0)clearInterval(timerInt);rem--}
+  tick(); timerInt=setInterval(tick,1000)
+}
+
+window.pick=async function(idx){
+  if(picked!==null)return; picked=idx; clearInterval(timerInt)
+  const ms=Date.now()-startMs,tl=(curQ?.time_limit||20)*1000
+  const{data:qs}=await sb.from('questions').select('id,answer,options').eq('major_id',quizId).order('order',{ascending:true})
+  const qr=qs?.[curQ.index]
+  const opts=Array.isArray(qr?.options)?qr.options:JSON.parse(qr?.options||'[]')
+  const ci=opts.indexOf(qr?.answer),ok=idx===ci
+  const pts=ok?Math.round(500+500*Math.max(0,1-ms/tl)):0
+  document.getElementById('o'+idx).classList.add('picked'); lockOpts()
+  if(ok){document.getElementById('o'+idx).classList.add('correct')}
+  else{document.getElementById('o'+idx).classList.add('wrong');if(ci>=0)document.getElementById('o'+ci)?.classList.add('correct')}
+  opts.forEach((_,i)=>{if(i!==idx&&i!==ci)document.getElementById('o'+i)?.classList.add('dim')})
+  if(qr){
+    await sb.from('session_answers').insert({session_id:sessionId,player_id:playerId,question_id:qr.id,selected_option:opts[idx],is_correct:ok,points_earned:pts,response_time_ms:ms})
+    totalScore+=pts
+    await sb.from('session_players').update({total_score:totalScore}).eq('id',playerId)
+  }
+  flash(pts,ok)
+}
+
+function lockOpts(){for(let i=0;i<4;i++){const b=document.getElementById('o'+i);if(b)b.disabled=true}}
+
+function flash(pts,ok){
+  const el=document.createElement('div'); el.className='flash'
+  el.innerHTML=`<div class="big">${ok?'✓':'✗'}</div><div class="lbl">${ok?'Riktig!':'Feil!'}</div><div class="pts">+${pts} poeng</div><div style="color:var(--muted);margin-top:.4rem;font-size:.85rem;">Totalt: ${totalScore.toLocaleString('no')}</div>`
+  document.body.appendChild(el); setTimeout(()=>el.remove(),2400)
+}
+
+function toast(msg){const t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);setTimeout(()=>t.remove(),3000)}
+</script>
 </body>
 </html>

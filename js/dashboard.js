@@ -40,7 +40,7 @@ function findColor(bg) {
 // ── INIT ──
 async function init() {
   const { data } = await db.auth.getSession()
-  if (!data.session) { window.location.href = 'index.html'; return }
+  if (!data.session) { window.location.href = 'login.html'; return }
 
   currentUser = data.session.user
   document.getElementById('userEmail').textContent   = currentUser.email.split('@')[0]
@@ -179,7 +179,8 @@ function renderQuizzes(list) {
                 <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
               </svg>
             </button>
-            <a class="btn-open" href="quiz.html?id=${q.id}">Opne →</a>
+            <a class="btn-open" href="quiz.html?id=${q.id}">Rediger</a>
+            <button class="btn-host" data-quiz-id="${q.id}">▶ Start</button>
           </div>
         </div>
       </div>`
@@ -201,6 +202,11 @@ function renderQuizzes(list) {
       e.stopPropagation()
       const b = e.currentTarget
       askDeleteQuiz(b.dataset.quizId, b.dataset.quizName)
+    })
+
+    card.querySelector('.btn-host').addEventListener('click', (e) => {
+      e.stopPropagation()
+      window.location.href = `host.html?quiz=${e.currentTarget.dataset.quizId}`
     })
 
     grid.appendChild(card)
@@ -241,7 +247,7 @@ function openQrModal(quizId, quizName, bgColor, inkColor) {
   titleEl.innerHTML = `<span class="qr-modal-dot" style="background:${bgColor}"></span>${escHtml(quizName)}`
 
   const base  = window.location.origin + window.location.pathname.replace('dashboard.html', '')
-  const qrUrl = `${base}QR-scan.html?id=${quizId}`
+  const qrUrl = `${base}index.html`
   document.getElementById('qrUrl').textContent = qrUrl
 
   // Set bakgrunn på QR-wrapen til quiz-fargen
@@ -363,7 +369,7 @@ function showToast(msg) {
 // ── LOGOUT ──
 async function logout() {
   await db.auth.signOut()
-  window.location.href = 'index.html'
+  window.location.href = 'login.html'
 }
 
 // ── ESCAPE HELPERS ──

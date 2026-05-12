@@ -565,3 +565,14 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 
   .toast { bottom: 24px; max-width: calc(100vw - 32px); white-space: normal; text-align: center; }
 }
+
+/* ── ▶ Start live quiz button ── */
+.btn-host {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 12px; border-radius: 8px; border: none;
+  background: #111118; color: #c8f050;
+  font-family: inherit; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: background 0.15s, transform 0.1s;
+  white-space: nowrap;
+}
+.btn-host:hover { background: #1f2937; transform: translateY(-1px); }
