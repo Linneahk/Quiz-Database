@@ -19,14 +19,19 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: .78rem;
+  font-size: .82rem;
   font-weight: 600;
-  color: var(--muted);
+  color: var(--ink);
   text-decoration: none;
-  margin-bottom: 6px;
-  transition: color .15s;
+  margin-bottom: 10px;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 14px;
+  transition: all .15s;
+  width: fit-content;
 }
-.back-link:hover { color: var(--ink); }
+.back-link:hover { border-color: var(--ink); background: var(--ink); color: white; }
 
 .editor-title {
   font-family: 'Fraunces', serif;
@@ -64,23 +69,25 @@
 }
 
 /* ── BUTTONS ── */
-.btn-print {
+.btn-pdf {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 11px 20px;
+  padding: 13px 22px;
   border: 1.5px solid var(--border);
   border-radius: 10px;
   background: var(--card);
   color: var(--ink);
   font-family: 'Fraunces', serif;
-  font-size: .88rem;
+  font-size: .95rem;
   font-weight: 700;
   cursor: pointer;
   transition: all .15s;
   white-space: nowrap;
+  box-shadow: 0 1px 4px rgba(17,17,24,0.07);
 }
-.btn-print:hover { border-color: var(--ink); }
+.btn-pdf:hover { border-color: var(--ink); background: var(--ink); color: white; }
+.btn-pdf:disabled { opacity: .5; cursor: not-allowed; }
 
 .btn-add {
   display: flex;
@@ -277,43 +284,93 @@
 .opt-input:focus { border-color: var(--ink); background: white; }
 .opt-input::placeholder { color: #c0c0bc; }
 
-/* ── CORRECT ANSWER ── */
+/* ── CORRECT ANSWER – checkboxes ── */
 .correct-row {
-  margin-top: 12px;
+  margin-top: 14px;
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
 }
 
-.correct-select {
-  padding: 8px 12px;
+.correct-checks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.check-opt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
   border: 1.5px solid var(--border);
-  border-radius: 8px;
-  font-family: 'Epilogue', sans-serif;
-  font-size: .85rem;
-  color: var(--ink);
+  border-radius: 9px;
   background: var(--bg);
-  outline: none;
   cursor: pointer;
-  flex: 1;
+  transition: border-color .15s, background .15s;
+  user-select: none;
+}
+.check-opt:hover { border-color: var(--ink); }
+.check-opt:has(input:checked) {
+  border-color: #16a34a;
+  background: #f0fff4;
+}
+
+.check-opt input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  accent-color: #16a34a;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+  border-radius: 4px;
+  margin: 0;
+}
+
+.check-letter {
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  background: var(--ink);
+  color: white;
+  font-size: .65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+.check-opt:has(input:checked) .check-letter { background: #16a34a; }
+
+.check-text {
+  font-family: 'Epilogue', sans-serif;
+  font-size: .82rem;
+  font-weight: 500;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* ── SAVE BUTTON ── */
 .btn-save-q {
-  margin-top: 16px;
-  padding: 10px 22px;
+  margin-top: 18px;
+  padding: 14px;
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   background: var(--ink);
   color: white;
   font-family: 'Fraunces', serif;
-  font-size: .88rem;
+  font-size: 1rem;
   font-weight: 700;
   cursor: pointer;
-  transition: opacity .15s;
+  transition: opacity .15s, transform .12s;
+  width: 100%;
+  letter-spacing: .01em;
 }
-.btn-save-q:hover { opacity: .85; }
-.btn-save-q:disabled { opacity: .45; cursor: not-allowed; }
+.btn-save-q:hover { opacity: .87; transform: translateY(-1px); }
+.btn-save-q:active { transform: translateY(0); }
+.btn-save-q:disabled { opacity: .45; cursor: not-allowed; transform: none; }
 
 /* ── QR PREVIEW ── */
 .qr-preview {
