@@ -84,10 +84,9 @@
   cursor: pointer;
   transition: all .15s;
   white-space: nowrap;
-  box-shadow: 0 1px 4px rgba(17,17,24,0.07);
 }
-.btn-pdf:hover { border-color: var(--ink); background: var(--ink); color: white; }
-.btn-pdf:disabled { opacity: .5; cursor: not-allowed; }
+.btn-pdf:hover { border-color: var(--ink); }
+.btn-pdf:disabled { opacity: .45; cursor: not-allowed; }
 
 .btn-add {
   display: flex;
