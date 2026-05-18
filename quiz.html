@@ -6,6 +6,7 @@
   <title>Stord Quiz – Rediger quiz</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,900;1,700&family=Epilogue:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/dashboard.css">
@@ -34,7 +35,7 @@
         <div class="editor-subtitle">Legg til spørsmål og generer QR-kodar</div>
       </div>
       <div class="header-actions">
-        <button class="btn-print" onclick="printQR()">🖨️ Skriv ut QR-kodar</button>
+        <button class="btn-pdf" onclick="downloadPDF()">Last ned PDF</button>
         <button class="btn-add" onclick="addQuestion()">
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>

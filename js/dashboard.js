@@ -143,75 +143,58 @@ function renderQuizzes(list) {
     const colorEsc = escAttr(bgColor)
     const inkEsc   = escAttr(inkColor)
 
-    // Eigar-line (berre admin ser dette på andre sine quizzar)
-    let ownerLine = ''
-    if (isAdmin && q.teacher_id !== currentUser.id) {
-      const t = teachersById[q.teacher_id]
-      const ownerLabel = t
-        ? (t.full_name || t.email || 'Ukjend lærar')
-        : 'Ukjend lærar'
-      ownerLine = `<div class="quiz-owner">👤 ${escHtml(ownerLabel)}</div>`
-    }
-
     card.innerHTML = `
       <div class="quiz-color-band" style="background:${bgColor}; color:${inkColor}">
         <span class="quiz-color-name">${escHtml(q.name)}</span>
+        <span class="quiz-color-date">Oppretta ${date}</span>
       </div>
       <div class="quiz-card-body">
-        <div class="quiz-meta">Oppretta ${date}</div>
-        ${ownerLine}
+        <div class="quiz-stats-mid">
+          <div class="quiz-stat-mid">
+            <span class="stat-num">${q.question_count || 0}</span>
+            <span class="stat-lbl">spørsmål</span>
+          </div>
+          <div class="stat-divider"></div>
+          <div class="quiz-stat-mid">
+            <span class="stat-num">${q.session_count || 0}</span>
+            <span class="stat-lbl">økter</span>
+          </div>
+        </div>
         <div class="quiz-card-footer">
-          <div class="quiz-stats">
-            <div class="quiz-stat">📝 ${q.question_count || 0} spørsmål</div>
-            <div class="quiz-stat">👥 ${q.session_count  || 0} økter</div>
-          </div>
-          <div class="quiz-card-actions">
-            <button class="btn-qr"
-              data-quiz-id="${q.id}"
-              data-quiz-name="${nameEsc}"
-              data-quiz-color="${colorEsc}"
-              data-quiz-ink="${inkEsc}"
-              title="Vis QR-kode">
-              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <rect x="3" y="3" width="7" height="7" rx="1"/>
-                <rect x="14" y="3" width="7" height="7" rx="1"/>
-                <rect x="3" y="14" width="7" height="7" rx="1"/>
-                <path d="M14 14h2v2h-2zM18 14h3M14 18h2M18 18h3M14 22h3M18 22h2"/>
-              </svg>
-            </button>
-            <button class="btn-delete-quiz"
-              data-quiz-id="${q.id}"
-              data-quiz-name="${nameEsc}"
-              title="Slett quiz">
-              <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-                <polyline points="3 6 5 6 21 6"/>
-                <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
-                <path d="M10 11v6M14 11v6"/>
-                <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
-              </svg>
-            </button>
-            <a class="btn-open" href="quiz.html?id=${q.id}">Opne →</a>
-          </div>
+          <button class="btn-delete-quiz"
+            data-quiz-id="${q.id}"
+            data-quiz-name="${nameEsc}"
+            title="Slett quiz">
+            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <polyline points="3 6 5 6 21 6"/>
+              <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+              <path d="M10 11v6M14 11v6"/>
+              <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+            </svg>
+            Slett
+          </button>
+          <a class="btn-open" href="quiz.html?id=${q.id}">Rediger</a>
+          <button class="btn-host" data-quiz-id="${q.id}">▶ Start</button>
         </div>
       </div>`
 
     // Klikk på korthovudet → opne quizen
     card.addEventListener('click', (e) => {
-      if (!e.target.closest('.quiz-card-actions')) {
+      if (!e.target.closest('.quiz-card-footer')) {
         window.location.href = `quiz.html?id=${q.id}`
       }
     })
 
     // Knappe-handlarar
-    card.querySelector('.btn-qr').addEventListener('click', (e) => {
-      e.stopPropagation()
-      const b = e.currentTarget
-      openQrModal(b.dataset.quizId, b.dataset.quizName, b.dataset.quizColor, b.dataset.quizInk)
-    })
     card.querySelector('.btn-delete-quiz').addEventListener('click', (e) => {
       e.stopPropagation()
       const b = e.currentTarget
       askDeleteQuiz(b.dataset.quizId, b.dataset.quizName)
+    })
+
+    card.querySelector('.btn-host').addEventListener('click', (e) => {
+      e.stopPropagation()
+      window.location.href = `host.html?quiz=${e.currentTarget.dataset.quizId}`
     })
 
     grid.appendChild(card)
@@ -252,7 +235,7 @@ function openQrModal(quizId, quizName, bgColor, inkColor) {
   titleEl.innerHTML = `<span class="qr-modal-dot" style="background:${bgColor}"></span>${escHtml(quizName)}`
 
   const base  = window.location.origin + window.location.pathname.replace('dashboard.html', '')
-  const qrUrl = `${base}QR-scan.html?id=${quizId}`
+  const qrUrl = `${base}index.html`
   document.getElementById('qrUrl').textContent = qrUrl
 
   // Set bakgrunn på QR-wrapen til quiz-fargen

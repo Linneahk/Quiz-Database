@@ -86,8 +86,9 @@ function addQuestion() {
     _localId: ++localIdCounter,
     question_text: '',
     options: ['', '', '', ''],
-    answer: '',
-    points: 1,         // alltid 1
+    answers: [],       // array for multiple correct answers
+    answer: '',        // kept for legacy single-answer compat
+    points: 1,
     image_url: '',
     _saved: false
   }
@@ -168,22 +169,24 @@ function renderList() {
         </div>
 
         <div class="correct-row">
-          <label class="field-label" style="margin:0">Riktig svar:</label>
-          <select class="correct-select" onchange="updateField(${q._localId}, 'answer', this.value)">
-            <option value="">– vel riktig svar –</option>
+          <label class="field-label" style="margin:0 0 8px">Riktige svar (vel ein eller fleire):</label>
+          <div class="correct-checks" id="checks-${q._localId}">
             ${['A','B','C','D'].map((letter, i) => `
-              <option value="${esc(q.options[i] || '')}" ${q.answer === q.options[i] ? 'selected' : ''}>
-                ${letter}: ${q.options[i] || '(tomt)'}
-              </option>
+              <label class="check-opt">
+                <input type="checkbox" class="correct-cb"
+                  data-lid="${q._localId}" data-idx="${i}"
+                  ${(q.answers||[]).includes(q.options[i]) && q.options[i] ? 'checked' : ''}
+                  onchange="toggleAnswer(${q._localId}, ${i}, this.checked)">
+                <span class="check-letter">${letter}</span>
+                <span class="check-text" id="chktxt-${q._localId}-${i}">${q.options[i] || '(tomt)'}</span>
+              </label>
             `).join('')}
-          </select>
+          </div>
         </div>
 
         <button class="btn-save-q" onclick="saveQuestion(${q._localId})">
           Lagre spørsmål
         </button>
-
-        ${q._saved && q.id ? qrPreviewHtml(q) : ''}
       </div>`
 
     list.appendChild(item)
@@ -191,15 +194,7 @@ function renderList() {
 }
 
 function qrPreviewHtml(q) {
-  return `
-    <div class="qr-preview" id="qrprev-${q._localId}">
-      <div id="qrcode-${q._localId}"></div>
-      <div class="qr-info">
-        <strong>QR-kode klar! 🎉</strong>
-        Skriv ut og heng opp denne lappen.<br>
-        Elevar skannar og kjem rett til spørsmålet.
-      </div>
-    </div>`
+  return '' // QR preview removed – use PDF download instead
 }
 
 // ── TOGGLE ──
@@ -251,6 +246,21 @@ function refreshCorrectSelect(lid) {
       </option>`).join('')
 }
 
+// ── TOGGLE CORRECT ANSWER ──
+function toggleAnswer(lid, idx, checked) {
+  const q = questions.find(x => x._localId === lid)
+  if (!q) return
+  if (!q.answers) q.answers = []
+  const val = q.options[idx]
+  if (checked && val && !q.answers.includes(val)) {
+    q.answers.push(val)
+  } else {
+    q.answers = q.answers.filter(a => a !== val)
+  }
+  q.answer = q.answers[0] || '' // legacy compat
+  q._saved = false
+}
+
 // ── SAVE QUESTION ──
 async function saveQuestion(lid) {
   const q = questions.find(x => x._localId === lid)
@@ -258,20 +268,26 @@ async function saveQuestion(lid) {
 
   if (!(q.question_text || '').trim()) return showToast('⚠️ Skriv inn spørsmålet')
   if (q.options.some(o => !o.trim())) return showToast('⚠️ Fyll inn alle 4 alternativ')
-  if (!q.answer) return showToast('⚠️ Vel riktig svar')
+  if (!q.answers || q.answers.length === 0) return showToast('⚠️ Vel minst eitt riktig svar')
 
   const item = document.querySelector(`[data-lid="${lid}"]`)
   const btn  = item.querySelector('.btn-save-q')
   btn.disabled = true
   btn.innerHTML = '<span class="spinner-sm"></span>Lagrar…'
 
+  // Lagra alle rette svar som JSON i answer-feltet om fleire, elles som tekst
+  const answersArr = q.answers && q.answers.length > 0 ? q.answers : [q.answer]
+  const answerVal  = answersArr.length === 1
+    ? answersArr[0]
+    : JSON.stringify(answersArr)
+
   const payload = {
     major_id:      quizId,
     created_by:    currentUser.id,
     question_text: q.question_text.trim(),
     options:       q.options,
-    answer:        q.answer,
-    points:        1,                         // alltid 1
+    answer:        answerVal,
+    points:        1,
     image_url:     q.image_url || null,
     is_active:     true,
     "order":       questions.indexOf(q),
@@ -293,30 +309,37 @@ async function saveQuestion(lid) {
     }).eq('id', quizId)
   }
 
+  // Oppdater question-objektet som er lagra
   q.id     = saved.id
   q._saved = true
-  q.points = 1
 
   btn.disabled = false
   btn.textContent = 'Lagre spørsmål'
 
-  if (!item.querySelector('.qr-preview')) {
-    const div = document.createElement('div')
-    div.innerHTML = qrPreviewHtml(q)
-    item.querySelector('.q-body').appendChild(div.firstElementChild)
-  }
-  generateQR(q)
-
-  const badge = item.querySelector('.q-saved-badge')
-  if (!badge) {
-    const right = item.querySelector('.q-item-right')
-    const span  = document.createElement('span')
-    span.className = 'q-saved-badge'
-    span.textContent = '✓ Lagra'
-    right.insertBefore(span, right.firstChild)
-  }
-
   showToast('✅ Spørsmål lagra!')
+
+  // Legg til eit nytt tomt spørsmål under, klar for neste
+  const newQ = {
+    _localId: ++localIdCounter,
+    question_text: '',
+    options: ['', '', '', ''],
+    answers: [],
+    answer: '',
+    points: 1,
+    image_url: '',
+    _saved: false
+  }
+  questions.push(newQ)
+  renderList()
+
+  // Scroll til og opne det nye tomme spørsmålet
+  setTimeout(() => {
+    const el = document.querySelector('[data-lid="' + newQ._localId + '"]')
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      toggleItem(el, true)
+    }
+  }, 80)
 }
 
 // ── DELETE ──
@@ -351,49 +374,90 @@ function generateQR(q) {
   })
 }
 
-// ── PRINT ──
-function printQR() {
+// ── LAST NED PDF MED QR-KODAR ──
+async function downloadPDF() {
   const saved = questions.filter(q => q._saved && q.id)
   if (saved.length === 0) return showToast('⚠️ Lagre minst eitt spørsmål fyrst')
 
-  // Hent quiz-farge for print – fallback til lime
-  const color    = findColor(currentQuiz && currentQuiz.color ? currentQuiz.color : COLORS[0].bg)
-  const bgColor  = color.bg
+  const btn = document.querySelector('.btn-pdf')
+  btn.disabled = true
+  btn.textContent = '⏳ Lagar PDF…'
+
+  const color   = findColor(currentQuiz && currentQuiz.color ? currentQuiz.color : COLORS[0].bg)
+  const bgColor = color.bg
   const inkColor = color.ink
 
-  const printArea = document.getElementById('printArea')
-  printArea.style.display = 'block'
-
-  // Set CSS-variablar slik at print-stil-arket kan bruke fargane
-  printArea.style.setProperty('--print-bg',  bgColor)
-  printArea.style.setProperty('--print-ink', inkColor)
-
-  printArea.innerHTML = `
-    <div class="print-grid">
-      ${saved.map((q, i) => `
-        <div class="print-card" style="background:${bgColor}; color:${inkColor}; border-color:${inkColor}">
-          <div class="print-card-num" style="color:${inkColor}">Spørsmål ${i + 1}</div>
-          <div class="print-card-q" style="color:${inkColor}; opacity:.85">${esc(q.question_text)}</div>
-          <div class="print-card-qr-wrap">
-            <div class="print-card-qr" id="print-qr-${q.id}"></div>
-          </div>
-          <div class="print-card-hint" style="color:${inkColor}; opacity:.7">Skann QR-koden for å svare</div>
-        </div>
-      `).join('')}
-    </div>`
-
-  saved.forEach(q => {
-    new QRCode(document.getElementById(`print-qr-${q.id}`), {
-      text:         `${BASE_URL}?id=${q.id}`,
-      width:        120,
-      height:       120,
-      colorDark:    '#000000',
-      colorLight:   '#ffffff',
-      correctLevel: QRCode.CorrectLevel.M
+  // Generate QR data URLs via hidden canvas
+  async function qrDataUrl(url) {
+    return new Promise((resolve) => {
+      const tmp = document.createElement('div')
+      tmp.style.cssText = 'position:fixed;left:-9999px;top:0'
+      document.body.appendChild(tmp)
+      new QRCode(tmp, { text: url, width: 200, height: 200, colorDark: '#000', colorLight: '#fff', correctLevel: QRCode.CorrectLevel.M })
+      setTimeout(() => {
+        const img = tmp.querySelector('img') || tmp.querySelector('canvas')
+        const src = img ? (img.src || img.toDataURL()) : ''
+        document.body.removeChild(tmp)
+        resolve(src)
+      }, 300)
     })
-  })
+  }
 
-  setTimeout(() => { window.print(); printArea.style.display = 'none' }, 400)
+  // A4 dimensions in mm
+  const { jsPDF } = window.jspdf
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+  const pageW = 210, pageH = 297
+  const margin = 10
+  const cols = 2, rows = 3
+  const cardW = (pageW - margin * 2 - (cols - 1) * 6) / cols
+  const cardH = (pageH - margin * 2 - (rows - 1) * 6) / rows
+
+  let page = 0
+  for (let i = 0; i < saved.length; i++) {
+    const q = saved[i]
+    const col = i % cols
+    const row = Math.floor((i % (cols * rows)) / cols)
+    const card = Math.floor(i / (cols * rows))
+
+    if (i > 0 && i % (cols * rows) === 0) {
+      doc.addPage()
+    }
+
+    const x = margin + col * (cardW + 6)
+    const y = margin + row * (cardH + 6)
+
+    // Card background
+    const r = parseInt(bgColor.slice(1,3),16)
+    const g = parseInt(bgColor.slice(3,5),16)
+    const b = parseInt(bgColor.slice(5,7),16)
+    doc.setFillColor(r, g, b)
+    doc.roundedRect(x, y, cardW, cardH, 4, 4, 'F')
+
+    // Dashed border
+    doc.setDrawColor(150,150,150)
+    doc.setLineDash([2,2])
+    doc.roundedRect(x, y, cardW, cardH, 4, 4, 'S')
+    doc.setLineDash([])
+
+    // QR code centered
+    const qrUrl = await qrDataUrl(`${BASE_URL}?id=${q.id}`)
+    if (qrUrl) {
+      const qrSize = Math.min(cardW, cardH) * 0.6
+      const qrX = x + (cardW - qrSize) / 2
+      const qrY = y + (cardH - qrSize) / 2
+      // White background behind QR
+      doc.setFillColor(255,255,255)
+      doc.roundedRect(qrX - 3, qrY - 3, qrSize + 6, qrSize + 6, 2, 2, 'F')
+      doc.addImage(qrUrl, 'PNG', qrX, qrY, qrSize, qrSize)
+    }
+  }
+
+  const quizName = currentQuiz ? currentQuiz.name.replace(/\s+/g,'_') : 'quiz'
+  doc.save(`QR_${quizName}.pdf`)
+
+  btn.disabled = false
+  btn.textContent = '📥 Last ned QR-PDF'
+  showToast('✅ PDF lasta ned!')
 }
 
 // ── TOAST ──
