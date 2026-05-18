@@ -541,6 +541,7 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
   width: fit-content;
 }
 
+<<<<<<< Updated upstream
 .quiz-card-footer {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -549,6 +550,46 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
   padding-top: 12px;
   border-top: 1px solid var(--border);
   margin-top: auto;
+=======
+
+
+/* QR-ikonknapp på kvar quiz-card */
+.btn-qr {
+  width: 30px; height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-qr:hover { background: var(--ink); color: white; border-color: var(--ink); }
+
+/* Slett-knapp på kvar quiz-card */
+.btn-delete-quiz {
+  width: 30px; height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  padding: 0;
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-delete-quiz:hover {
+  background: #fff5f5;
+  color: var(--error);
+  border-color: var(--error);
+>>>>>>> Stashed changes
 }
 
 .btn-open {
@@ -571,6 +612,7 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 .btn-open:hover  { background: var(--ink); color: white; border-color: var(--ink); }
 .btn-open:active { opacity: 0.7; }
 
+<<<<<<< Updated upstream
 /* ── AKTIVE ØKTER BADGE ── */
 .active-sessions-badge {
   display: flex;
@@ -599,6 +641,24 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 @keyframes blink {
   0%, 100% { opacity: 1; }
   50%       { opacity: 0.3; }
+=======
+.quiz-card-footer {
+  display: flex;
+  flex-direction: column;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  gap: 10px;
+  margin-top: auto;
+}
+.quiz-stats { display: flex; gap: 12px; }
+.quiz-stat  { display: flex; align-items: center; gap: 4px; font-size: 0.72rem; color: var(--muted); font-weight: 500; }
+
+.quiz-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+>>>>>>> Stashed changes
 }
 
 /* ── EMPTY STATE ── */
@@ -854,29 +914,43 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
    MOBIL  (< 600px)
 ════════════════════════════════ */
 @media (max-width: 599px) {
-  .topbar { padding: 0 16px; height: 56px; }
+  .topbar { padding: 0 14px; height: 52px; gap: 8px; }
   .user-chip { padding: 5px; border-radius: 50%; }
   .user-chip span { display: none; }
-  .logout-btn { padding: 7px 10px; font-size: 0.72rem; }
-  /* Gøym tekst på QR-knappen, vis berre ikon */
+  .logout-btn { padding: 6px 10px; font-size: 0.72rem; }
   .qr-scan-btn span { display: none; }
-  .qr-scan-btn { padding: 7px 10px; }
+  .qr-scan-btn { padding: 6px 10px; }
 
-  .main { padding: 24px 16px 100px; }
+  .main { padding: 20px 14px 100px; }
 
-  .page-title { font-size: 1.6rem; }
-  .page-header { flex-direction: column; align-items: flex-start; gap: 16px; margin-bottom: 24px; }
-  .btn-create { width: 100%; justify-content: center; padding: 14px; font-size: 1rem; border-radius: 12px; }
+  .page-title { font-size: 1.5rem; }
+  .page-header { flex-direction: column; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+  .btn-create { width: 100%; justify-content: center; padding: 13px; font-size: 0.95rem; border-radius: 12px; }
 
+<<<<<<< Updated upstream
   .section-header { flex-direction: column; align-items: flex-start; gap: 10px; }
   .search-input   { width: 100%; font-size: 1rem; padding: 10px 14px; }
+=======
+  .stats-row { gap: 8px; margin-bottom: 20px; }
+  .stat-value { font-size: 1.4rem; }
+  .stat-card { padding: 14px 16px; }
 
-  .quiz-grid { grid-template-columns: 1fr; gap: 12px; }
+  .section-header { flex-direction: column; align-items: flex-start; gap: 8px; }
+  .search-input { width: 100%; font-size: 0.95rem; padding: 10px 14px; }
+>>>>>>> Stashed changes
 
-  /* Fargevelger på mobil – litt færre i breidda for større fingertreff */
-  .color-grid { grid-template-columns: repeat(6, 1fr); gap: 10px; }
+  .quiz-grid { grid-template-columns: 1fr; gap: 10px; }
 
-  .toast { bottom: 24px; max-width: calc(100vw - 32px); white-space: normal; text-align: center; }
+  .color-grid { grid-template-columns: repeat(6, 1fr); gap: 8px; }
+
+  .toast { bottom: 20px; max-width: calc(100vw - 28px); white-space: normal; text-align: center; }
+
+  /* Card footer: stats on top, actions below — fully visible */
+  .quiz-card-footer { gap: 8px; }
+  .quiz-card-actions { gap: 5px; }
+  .btn-open { font-size: 0.7rem; padding: 5px 10px; }
+  .btn-host { font-size: 0.7rem; padding: 5px 10px; }
+  .btn-qr, .btn-delete-quiz { width: 28px; height: 28px; }
 }
 
 /* ── ▶ Start live quiz button ── */
@@ -897,4 +971,26 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
   transition: all 0.15s;
   white-space: nowrap;
 }
+<<<<<<< Updated upstream
 .btn-host:hover { background: var(--ink); color: white; border-color: var(--ink); }
+=======
+.btn-host:hover { background: #1f2937; transform: translateY(-1px); }
+
+/* ── Active session rejoin button ── */
+.btn-rejoin {
+  background: #1a2a00 !important;
+  color: #c8f050 !important;
+  border: 1px solid #c8f050 !important;
+  animation: pulse-green 2s ease-in-out infinite;
+}
+.btn-rejoin:hover {
+  background: #2a4a00 !important;
+  transform: translateY(-1px);
+}
+@keyframes pulse-green {
+  0%,100% { box-shadow: 0 0 0 0 rgba(200,240,80,.4); }
+  50%      { box-shadow: 0 0 0 6px rgba(200,240,80,0); }
+}
+
+
+>>>>>>> Stashed changes

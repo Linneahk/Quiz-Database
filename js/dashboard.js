@@ -24,8 +24,9 @@ const COLORS = [
   { name: 'Svart',   bg: '#1f2937', ink: '#ffffff' }
 ]
 
-let selectedColor   = COLORS[0]
-let allQuizzes      = []
+let selectedColor        = COLORS[0]
+let allQuizzes           = []
+let activeSessionsByQuiz = {}
 let teachersById    = {}
 let currentUser     = null
 let isAdmin         = false
@@ -152,6 +153,21 @@ async function loadQuizzes() {
     if (error) throw error
     allQuizzes = data || []
 
+    // Fetch active/waiting sessions for this teacher directly by host_id
+    {
+      const { data: activeSessions } = await db
+        .from('sessions')
+        .select('id, quiz_id, join_code, status, started_at')
+        .eq('host_id', currentUser.id)
+        .in('status', ['waiting', 'active'])
+        .order('started_at', { ascending: false })
+      activeSessionsByQuiz = {}
+      ;(activeSessions || []).forEach(s => {
+        // Keep most recent per quiz
+        if (!activeSessionsByQuiz[s.quiz_id]) activeSessionsByQuiz[s.quiz_id] = s
+      })
+    }
+
     if (isAdmin && allQuizzes.length > 0) {
       const ids = [...new Set(allQuizzes.map(q => q.teacher_id).filter(Boolean))]
       if (ids.length > 0) {
@@ -242,7 +258,12 @@ function renderQuizzes(list) {
           </div>
           <div class="quiz-card-footer">
             <a class="btn-open" href="quiz.html?id=${q.id}">Rediger</a>
-            <button class="btn-host" data-quiz-id="${q.id}">▶ Start</button>
+            ${activeSessionsByQuiz[q.id]
+              ? `<button class="btn-host btn-rejoin" data-quiz-id="${q.id}" data-session-id="${activeSessionsByQuiz[q.id].id}" title="PIN: ${activeSessionsByQuiz[q.id].join_code}">
+                   ${activeSessionsByQuiz[q.id].status === 'active' ? '🏃 Aktiv' : '⏳ Venter'} · ${activeSessionsByQuiz[q.id].join_code}
+                 </button>`
+              : `<button class="btn-host" data-quiz-id="${q.id}">▶ Start</button>`
+            }
           </div>
         </div>
       </div>`
@@ -277,6 +298,7 @@ function renderQuizzes(list) {
 
     card.querySelector('.btn-host').addEventListener('click', (e) => {
       e.stopPropagation()
+      // host.html finds existing session automatically via localStorage or DB
       window.location.href = `host.html?quiz=${e.currentTarget.dataset.quizId}`
     })
 
@@ -284,6 +306,7 @@ function renderQuizzes(list) {
   })
 }
 
+<<<<<<< Updated upstream
 // Lukk meny ved klikk utanfor
 document.addEventListener('click', () => {
   document.querySelectorAll('.quiz-menu-pop.open').forEach(p => p.classList.remove('open'))
@@ -514,6 +537,15 @@ function applyFilters() {
   })
 
   renderQuizzes(list)
+=======
+// ── STATS ──
+function updateStats(list) {
+  document.getElementById('statTotal').textContent  = list.length
+  // Count quizzes with an active session (not quiz.status which is always 'draft')
+  // Count sessions that are waiting or active
+  document.getElementById('statActive').textContent = Object.values(activeSessionsByQuiz)
+    .filter(s => ['waiting','active'].includes(s.status)).length
+>>>>>>> Stashed changes
 }
 
 // ── SEARCH ──
