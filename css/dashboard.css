@@ -542,12 +542,11 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
 }
 
 .quiz-card-footer {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  align-items: center;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
   padding-top: 12px;
   border-top: 1px solid var(--border);
+  gap: 10px;
   margin-top: auto;
 }
 
@@ -898,3 +897,14 @@ body.dashboard-body { display: block; padding: 0; align-items: unset; justify-co
   white-space: nowrap;
 }
 .btn-host:hover { background: var(--ink); color: white; border-color: var(--ink); }
+/* ── End session button (✕ next to Fortset) ── */
+.btn-end-session {
+  width: 28px; height: 28px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--error, #e53e3e);
+  border-radius: 6px; background: transparent;
+  color: var(--error, #e53e3e); font-size: 0.78rem;
+  cursor: pointer; transition: all 0.15s;
+  flex-shrink: 0; padding: 0;
+}
+.btn-end-session:hover { background: var(--error, #e53e3e); color: white; }

@@ -30,7 +30,8 @@ let teachersById    = {}
 let currentUser     = null
 let isAdmin         = false
 let activeQrQuizId  = null
-let pendingDeleteId = null
+let pendingDeleteId      = null
+let activeSessionsByQuiz = {}
 let currentSearch   = ''
 let activeTag       = null       // null = vis alle
 
@@ -167,6 +168,23 @@ async function loadQuizzes() {
     console.error('Kunne ikkje hente quizzar:', err)
     allQuizzes = []
   }
+
+  // Fetch active/waiting sessions for this teacher
+  if (currentUser) {
+    try {
+      const { data: activeSessions } = await db
+        .from('sessions')
+        .select('id, quiz_id, join_code, status, started_at')
+        .eq('host_id', currentUser.id)
+        .in('status', ['waiting', 'active'])
+        .order('started_at', { ascending: false })
+      activeSessionsByQuiz = {}
+      ;(activeSessions || []).forEach(s => {
+        if (!activeSessionsByQuiz[s.quiz_id]) activeSessionsByQuiz[s.quiz_id] = s
+      })
+    } catch(e) { console.error('Sessions fetch error', e) }
+  }
+
   updateHeaderStats()
   renderTagChips()
   applyFilters()
@@ -242,7 +260,10 @@ function renderQuizzes(list) {
           </div>
           <div class="quiz-card-footer">
             <a class="btn-open" href="quiz.html?id=${q.id}">Rediger</a>
-            <button class="btn-host" data-quiz-id="${q.id}">▶ Start</button>
+            ${activeSessionsByQuiz[q.id]
+              ? `<button class="btn-host btn-rejoin" data-quiz-id="${q.id}" title="PIN: ${activeSessionsByQuiz[q.id].join_code}">${activeSessionsByQuiz[q.id].status === 'active' ? '🏃' : '⏳'} Fortset · ${activeSessionsByQuiz[q.id].join_code}</button><button class="btn-end-session" data-quiz-id="${q.id}" data-session-id="${activeSessionsByQuiz[q.id].id}" title="Avslutt økt">✕</button>`
+              : `<button class="btn-host" data-quiz-id="${q.id}">▶ Start</button>`
+            }
           </div>
         </div>
       </div>`
@@ -280,6 +301,25 @@ function renderQuizzes(list) {
       window.location.href = `host.html?quiz=${e.currentTarget.dataset.quizId}`
     })
 
+    const endBtn = card.querySelector('.btn-end-session')
+    if (endBtn) {
+      endBtn.addEventListener('click', async (e) => {
+        e.stopPropagation()
+        if (!confirm('Vil du avslutte denne aktive økta?')) return
+        const sid = e.currentTarget.dataset.sessionId
+        const qid = e.currentTarget.dataset.quizId
+        const { error } = await db.from('sessions')
+          .update({ status: 'finished', ended_at: new Date().toISOString() })
+          .eq('id', sid)
+        if (error) { showToast('❌ Kunne ikkje avslutte: ' + error.message); return }
+        localStorage.removeItem('host_session_' + qid)
+        delete activeSessionsByQuiz[qid]
+        applyFilters()
+        updateHeaderStats()
+        showToast('✅ Økt avslutta')
+      })
+    }
+
     grid.appendChild(card)
   })
 }
@@ -292,7 +332,7 @@ document.addEventListener('click', () => {
 // ── HEADER-STATS (samandrag i subtitle) ──
 function updateHeaderStats() {
   const total  = allQuizzes.length
-  const active = allQuizzes.filter(q => q.status === 'active').length
+  const active = typeof activeSessionsByQuiz !== "undefined" ? Object.keys(activeSessionsByQuiz).length : 0
   const sub = document.getElementById('pageSubtitle')
   if (!sub) return
   if (total === 0) {

@@ -218,3 +218,29 @@ body {
   .q-text { font-size: 1.15rem; }
   .options { grid-template-columns: 1fr; }
 }
+
+/* back-to-hunt link in topbar */
+.back-to-hunt {
+  font-size: 0.78rem; font-weight: 600; color: var(--muted);
+  text-decoration: none; padding: 6px 12px;
+  border: 1.5px solid var(--border); border-radius: 8px;
+  transition: all 0.15s; white-space: nowrap;
+}
+.back-to-hunt:hover { color: var(--ink); border-color: var(--ink); }
+
+.btn-back {
+  display: inline-flex; align-items: center; gap: 6px;
+  margin-top: 8px; padding: 12px 20px;
+  background: var(--ink); color: white; border-radius: 10px;
+  text-decoration: none; font-family: 'Fraunces', serif;
+  font-weight: 700; font-size: 0.92rem;
+  transition: opacity 0.15s; width: 100%; justify-content: center;
+}
+.btn-back:hover { opacity: 0.85; }
+
+@media (max-width: 560px) {
+  .options { grid-template-columns: 1fr; }
+  .topbar { padding: 0 12px; gap: 8px; }
+  .main { padding: 20px 14px 60px; }
+  .q-text { font-size: 1.1rem; }
+}
