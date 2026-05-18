@@ -6,21 +6,181 @@
   <title>Stord Quiz – Spørsmål</title>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,900;1,700&family=Epilogue:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css">
-  <link rel="stylesheet" href="css/question.css">
+  <style>
+    /* ── same tokens as host.html / index.html ── */
+    :root{
+      --bg:#0f0f13;--surface:#1a1a24;--border:#2a2a3a;
+      --accent:#c8f050;--text:#f0f0f5;--muted:#7a7a9a;
+      --red:#ff4d6d;--green:#22c55e;--yellow:#f0c050;
+    }
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+    html,body{min-height:100%;background:var(--bg);color:var(--text);font-family:'Epilogue',sans-serif;}
+    body{display:flex;flex-direction:column;}
+
+    /* ── TOPBAR — matches hunt-topbar exactly ── */
+    .topbar{
+      background:var(--surface);border-bottom:1px solid var(--border);
+      padding:clamp(.6rem,2vw,.9rem) clamp(.75rem,3vw,1.25rem);
+      display:flex;align-items:center;justify-content:space-between;
+      gap:.5rem;flex-shrink:0;position:sticky;top:0;z-index:10;
+    }
+    .topbar-logo{
+      font-family:'Fraunces',serif;font-weight:900;
+      font-size:clamp(.95rem,2.5vw,1.1rem);
+      color:var(--accent);text-decoration:none;white-space:nowrap;
+    }
+    .points-pill{
+      display:flex;align-items:center;gap:.35rem;
+      background:var(--bg);border:1px solid var(--border);border-radius:99px;
+      padding:.3rem .85rem;
+      font-family:'Fraunces',serif;font-weight:700;
+      font-size:clamp(.72rem,2vw,.82rem);
+      color:var(--text);white-space:nowrap;
+    }
+    .points-pill.bump{animation:bump .35s ease;}
+    @keyframes bump{0%{transform:scale(1);}40%{transform:scale(1.15);}100%{transform:scale(1);}}
+    .back-btn{
+      font-size:clamp(.68rem,2vw,.78rem);font-weight:600;color:var(--muted);
+      text-decoration:none;padding:.3rem .75rem;
+      border:1px solid var(--border);border-radius:8px;
+      transition:border-color .15s,color .15s;white-space:nowrap;
+      flex-shrink:0;
+    }
+    .back-btn:hover{border-color:var(--text);color:var(--text);}
+
+    /* ── MAIN ── */
+    .main{
+      flex:1;width:100%;
+      max-width:600px;margin:0 auto;
+      padding:clamp(.75rem,3vw,1.25rem) clamp(.75rem,3vw,1.25rem) clamp(2rem,6vw,3rem);
+    }
+
+    /* ── SPINNER ── */
+    .center-msg{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:55vh;gap:1rem;color:var(--muted);text-align:center;}
+    .spinner-q{width:30px;height:30px;border:2.5px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .7s linear infinite;}
+    @keyframes spin{to{transform:rotate(360deg);}}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
+
+    /* ── QUESTION CARD — matches lb-row style ── */
+    .q-card{
+      background:var(--surface);border:1px solid var(--border);
+      border-radius:16px;padding:clamp(1rem,4vw,1.4rem);
+      margin-bottom:clamp(.65rem,2.5vw,1rem);
+      animation:fadeUp .25s ease;
+    }
+    .q-meta{
+      display:flex;align-items:center;justify-content:space-between;
+      margin-bottom:clamp(.65rem,2vw,.9rem);
+    }
+    .q-badge{
+      font-size:.68rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+      color:var(--muted);background:var(--bg);
+      border:1px solid var(--border);border-radius:6px;padding:3px 10px;
+    }
+    .q-points-badge{
+      font-size:.78rem;font-weight:700;
+      background:#1a2a00;border:1px solid #3a5000;
+      border-radius:6px;padding:3px 10px;color:var(--accent);
+    }
+    .q-image{
+      width:100%;max-height:220px;object-fit:cover;
+      border-radius:10px;margin-bottom:.85rem;
+      border:1px solid var(--border);
+    }
+    .q-text{
+      font-family:'Fraunces',serif;font-weight:700;line-height:1.35;
+      font-size:clamp(1.05rem,3.5vw,1.45rem);color:var(--text);
+    }
+
+    /* ── OPTIONS — 2 col on tablet+, 1 col on small phones ── */
+    .options{
+      display:grid;
+      grid-template-columns:repeat(2,1fr);
+      gap:clamp(.5rem,2vw,.75rem);
+      margin-bottom:clamp(.65rem,2.5vw,1rem);
+      animation:fadeUp .25s ease .08s both;
+    }
+    .opt-btn{
+      background:var(--surface);border:2px solid var(--border);
+      border-radius:14px;
+      padding:clamp(.85rem,3vw,1.1rem) clamp(.75rem,2.5vw,1rem);
+      cursor:pointer;text-align:left;
+      color:var(--text);font-family:'Epilogue',sans-serif;
+      font-size:clamp(.82rem,2.5vw,.95rem);font-weight:500;
+      transition:border-color .15s,background .15s,transform .1s;
+      width:100%;display:flex;flex-direction:column;gap:.4rem;
+      -webkit-tap-highlight-color:transparent;
+    }
+    .opt-btn:not(:disabled):hover{
+      border-color:var(--accent);background:#1a2400;transform:translateY(-2px);
+    }
+    .opt-btn:not(:disabled):active{transform:scale(.97);}
+    .opt-btn:disabled{cursor:default;}
+    .opt-letter{
+      display:inline-flex;align-items:center;justify-content:center;
+      width:26px;height:26px;border-radius:7px;
+      background:var(--border);color:var(--text);
+      font-size:.7rem;font-weight:700;flex-shrink:0;
+      transition:background .15s;
+    }
+    /* correct / wrong — match index.html hunt colors */
+    .opt-btn.correct{border-color:var(--green);background:#0a2a12;}
+    .opt-btn.correct .opt-letter{background:var(--green);color:#fff;}
+    .opt-btn.wrong{border-color:var(--red);background:#2a0a12;}
+    .opt-btn.wrong .opt-letter{background:var(--red);color:#fff;}
+
+    /* ── RESULT BANNER — matches lb-row.gold/silver style ── */
+    .result-banner{
+      border-radius:14px;
+      padding:clamp(.85rem,3vw,1.1rem) clamp(.85rem,3vw,1.1rem);
+      display:flex;align-items:center;gap:.85rem;
+      margin-bottom:clamp(.65rem,2.5vw,1rem);
+      border:1px solid;
+      animation:fadeUp .25s ease;
+    }
+    .correct-banner{background:#0a2a12;border-color:var(--green);}
+    .wrong-banner  {background:#2a0a12;border-color:var(--red);}
+    .result-icon{font-size:clamp(1.4rem,5vw,1.8rem);flex-shrink:0;line-height:1;}
+    .result-title{
+      font-family:'Fraunces',serif;font-size:clamp(.9rem,3vw,1.05rem);
+      font-weight:700;color:var(--text);margin-bottom:2px;
+    }
+    .result-desc{font-size:clamp(.75rem,2.5vw,.85rem);color:var(--muted);}
+
+    /* ── BACK BUTTON — matches btn-start style ── */
+    .btn-back{
+      display:flex;align-items:center;justify-content:center;gap:.5rem;
+      padding:clamp(.85rem,3vw,1rem) 1rem;
+      background:var(--accent);color:#0f0f13;border:none;border-radius:14px;
+      text-decoration:none;font-family:'Fraunces',serif;font-weight:700;
+      font-size:clamp(.95rem,3vw,1.05rem);
+      transition:transform .15s,box-shadow .15s;width:100%;
+      box-shadow:0 4px 20px rgba(200,240,80,.2);
+      cursor:pointer;
+      animation:fadeUp .25s ease .15s both;
+    }
+    .btn-back:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(200,240,80,.3);}
+
+    /* ── RESPONSIVE ── */
+    @media(max-width:400px){
+      .options{grid-template-columns:1fr;}
+      .back-btn{display:none;} /* hide topbar back, big btn-back is enough */
+    }
+    @media(min-width:600px){
+      .main{padding:1.5rem 1.5rem 3rem;}
+    }
+  </style>
 </head>
 <body>
 
-  <!-- TOPBAR -->
   <header class="topbar">
     <a href="index.html" class="topbar-logo">Stord Quiz</a>
     <div class="points-pill" id="pointsPill">
-      ⭐ <span id="totalPoints">0</span> poeng &nbsp;·&nbsp; <span id="totalQs">?</span> spørsmål
+      ⭐ <span id="totalPoints">0</span>&nbsp;·&nbsp;<span id="totalQs">?</span> spørsmål
     </div>
-    <a href="index.html" class="back-to-hunt">← Tilbake til jakt</a>
+    <a href="index.html" class="back-btn">← Jakt</a>
   </header>
 
-  <!-- MAIN -->
   <main class="main">
     <div id="content">
       <div class="center-msg">
