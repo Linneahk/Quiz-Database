@@ -31,10 +31,74 @@ let currentUser     = null
 let isAdmin         = false
 let activeQrQuizId  = null
 let pendingDeleteId = null
+let currentSearch   = ''
+let activeTag       = null       // null = vis alle
 
 // Hjelp: finn farge-objekt frå lagra bg-verdi
 function findColor(bg) {
   return COLORS.find(c => c.bg === bg) || COLORS[0]
+}
+
+// ── TAG-STORE (localStorage, til DB-kolonne er på plass) ──
+const TAG_KEY = 'quiz_tags_v1'
+function loadTags() {
+  try { return JSON.parse(localStorage.getItem(TAG_KEY) || '{}') }
+  catch { return {} }
+}
+function saveTags(map) {
+  localStorage.setItem(TAG_KEY, JSON.stringify(map))
+}
+function getTag(quizId) {
+  const map = loadTags()
+  return map[quizId] || ''
+}
+function setTag(quizId, tag) {
+  const map = loadTags()
+  const clean = (tag || '').trim()
+  if (clean) map[quizId] = clean
+  else delete map[quizId]
+  saveTags(map)
+}
+
+// Alle unike kategorinamn (sortert)
+function getAllCategories() {
+  const map = loadTags()
+  const set = new Set(Object.values(map).filter(Boolean))
+  return Array.from(set).sort((a, b) => a.localeCompare(b, 'no'))
+}
+
+// Tel kor mange quizzar som har kvar kategori
+function countByCategory() {
+  const map = loadTags()
+  const counts = {}
+  Object.values(map).forEach(t => {
+    if (t) counts[t] = (counts[t] || 0) + 1
+  })
+  return counts
+}
+
+// Endre namn på ein kategori (alle quizzar med gammalt namn får nytt)
+function renameCategory(oldName, newName) {
+  const clean = (newName || '').trim()
+  if (!clean || clean === oldName) return false
+  const map = loadTags()
+  let changed = false
+  Object.keys(map).forEach(qid => {
+    if (map[qid] === oldName) { map[qid] = clean; changed = true }
+  })
+  if (changed) saveTags(map)
+  return changed
+}
+
+// Fjern kategori frå alle quizzar
+function deleteCategory(name) {
+  const map = loadTags()
+  let changed = false
+  Object.keys(map).forEach(qid => {
+    if (map[qid] === name) { delete map[qid]; changed = true }
+  })
+  if (changed) saveTags(map)
+  return changed
 }
 
 // ── INIT ──
@@ -103,8 +167,9 @@ async function loadQuizzes() {
     console.error('Kunne ikkje hente quizzar:', err)
     allQuizzes = []
   }
-  renderQuizzes(allQuizzes)
-  updateStats(allQuizzes)
+  updateHeaderStats()
+  renderTagChips()
+  applyFilters()
 }
 
 // ── RENDER QUIZ CARDS ──
@@ -116,8 +181,8 @@ function renderQuizzes(list) {
     grid.innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">🗺️</div>
-        <div class="empty-title">Ingen quizzar enno</div>
-        <div class="empty-desc">Trykk «Ny quiz» for å kome i gang med ditt første rebusløp.</div>
+        <div class="empty-title">${allQuizzes.length === 0 ? 'Ingen quizzar enno' : 'Fann ingen quizzar'}</div>
+        <div class="empty-desc">${allQuizzes.length === 0 ? 'Trykk «Ny quiz» for å kome i gang med ditt første rebusløp.' : 'Prøv eit anna søk eller fjern filter.'}</div>
       </div>`
     return
   }
@@ -130,8 +195,9 @@ function renderQuizzes(list) {
     const color    = findColor(q.color || COLORS[0].bg)
     const bgColor  = color.bg
     const inkColor = color.ink
+    const tag      = getTag(q.id)
+    const isActive = q.status === 'active'
 
-    // Sett accent-farge på kortet via CSS-variabler
     card.style.setProperty('--quiz-bg',  bgColor)
     card.style.setProperty('--quiz-ink', inkColor)
 
@@ -139,56 +205,73 @@ function renderQuizzes(list) {
       day: 'numeric', month: 'short', year: 'numeric'
     })
 
-    const nameEsc  = escAttr(q.name)
-    const colorEsc = escAttr(bgColor)
-    const inkEsc   = escAttr(inkColor)
+    const nameEsc = escAttr(q.name)
 
     card.innerHTML = `
-      <div class="quiz-color-band" style="background:${bgColor}; color:${inkColor}">
-        <span class="quiz-color-name">${escHtml(q.name)}</span>
-        <span class="quiz-color-date">Oppretta ${date}</span>
-      </div>
-      <div class="quiz-card-body">
-        <div class="quiz-stats-mid">
-          <div class="quiz-stat-mid">
-            <span class="stat-num">${q.question_count || 0}</span>
-            <span class="stat-lbl">spørsmål</span>
-          </div>
-          <div class="stat-divider"></div>
-          <div class="quiz-stat-mid">
-            <span class="stat-num">${q.session_count || 0}</span>
-            <span class="stat-lbl">økter</span>
-          </div>
-        </div>
-        <div class="quiz-card-footer">
-          <button class="btn-delete-quiz"
-            data-quiz-id="${q.id}"
-            data-quiz-name="${nameEsc}"
-            title="Slett quiz">
-            <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+      <div class="quiz-color-stripe"></div>
+      <div class="quiz-card-inner">
+        <button class="quiz-menu-btn" aria-label="Meir" data-quiz-id="${q.id}">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+          </svg>
+        </button>
+        <div class="quiz-menu-pop" data-menu-for="${q.id}">
+          <button class="quiz-menu-item danger" data-action="delete" data-quiz-id="${q.id}" data-quiz-name="${nameEsc}">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <polyline points="3 6 5 6 21 6"/>
               <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
               <path d="M10 11v6M14 11v6"/>
               <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
             </svg>
-            Slett
+            Slett quiz
           </button>
-          <a class="btn-open" href="quiz.html?id=${q.id}">Rediger</a>
-          <button class="btn-host" data-quiz-id="${q.id}">▶ Start</button>
+        </div>
+        <div class="quiz-header">
+          <span class="quiz-name">${escHtml(q.name)}</span>
+          <div class="quiz-meta">
+            ${isActive ? '<span><span class="quiz-active-dot"></span>Aktiv</span>' : `<span>Oppretta ${date}</span>`}
+            ${tag ? `<span class="quiz-tag">${escHtml(tag)}</span>` : ''}
+          </div>
+        </div>
+        <div class="quiz-card-body">
+          <div class="quiz-stats-mid">
+            <div class="quiz-stat-mid">
+              <span class="stat-num">${q.question_count || 0}</span>
+              <span class="stat-lbl">spørsmål</span>
+            </div>
+          </div>
+          <div class="quiz-card-footer">
+            <a class="btn-open" href="quiz.html?id=${q.id}">Rediger</a>
+            <button class="btn-host" data-quiz-id="${q.id}">▶ Start</button>
+          </div>
         </div>
       </div>`
 
-    // Klikk på korthovudet → opne quizen
+    // Klikk på kortet (utanom footer/meny) → opne quizen
     card.addEventListener('click', (e) => {
-      if (!e.target.closest('.quiz-card-footer')) {
-        window.location.href = `quiz.html?id=${q.id}`
-      }
+      if (e.target.closest('.quiz-card-footer')) return
+      if (e.target.closest('.quiz-menu-btn'))   return
+      if (e.target.closest('.quiz-menu-pop'))   return
+      window.location.href = `quiz.html?id=${q.id}`
     })
 
-    // Knappe-handlarar
-    card.querySelector('.btn-delete-quiz').addEventListener('click', (e) => {
+    // ...-meny opnar/lukkar
+    const menuBtn = card.querySelector('.quiz-menu-btn')
+    const menuPop = card.querySelector('.quiz-menu-pop')
+    menuBtn.addEventListener('click', (e) => {
+      e.stopPropagation()
+      // lukk andre opne menyar
+      document.querySelectorAll('.quiz-menu-pop.open').forEach(p => {
+        if (p !== menuPop) p.classList.remove('open')
+      })
+      menuPop.classList.toggle('open')
+    })
+
+    // slett-handling i meny
+    menuPop.querySelector('[data-action="delete"]').addEventListener('click', (e) => {
       e.stopPropagation()
       const b = e.currentTarget
+      menuPop.classList.remove('open')
       askDeleteQuiz(b.dataset.quizId, b.dataset.quizName)
     })
 
@@ -201,26 +284,256 @@ function renderQuizzes(list) {
   })
 }
 
-// ── STATS ──
-function updateStats(list) {
-  document.getElementById('statTotal').textContent  = list.length
-  document.getElementById('statActive').textContent = list.filter(q => q.status === 'active').length
+// Lukk meny ved klikk utanfor
+document.addEventListener('click', () => {
+  document.querySelectorAll('.quiz-menu-pop.open').forEach(p => p.classList.remove('open'))
+})
+
+// ── HEADER-STATS (samandrag i subtitle) ──
+function updateHeaderStats() {
+  const total  = allQuizzes.length
+  const active = allQuizzes.filter(q => q.status === 'active').length
+  const sub = document.getElementById('pageSubtitle')
+  if (!sub) return
+  if (total === 0) {
+    sub.textContent = 'Opprett din første quiz med knappen til høgre.'
+    return
+  }
+  const quizWord = total === 1 ? 'quiz' : 'quizzar'
+  let html = `Du har <strong>${total}</strong> ${quizWord}`
+  if (active > 0) {
+    html += ` · <span class="subtitle-dot"></span><strong>${active}</strong> aktiv${active === 1 ? '' : 'e'} no`
+  }
+  sub.innerHTML = html
+}
+
+// ── TAG-CHIPS over grid ──
+function renderTagChips() {
+  const wrap = document.getElementById('tagChips')
+  wrap.innerHTML = ''
+  const tagMap = loadTags()
+  // tel kor mange quizzar per tag (berre dei brukaren ser)
+  const counts = {}
+  allQuizzes.forEach(q => {
+    const t = tagMap[q.id]
+    if (t) counts[t] = (counts[t] || 0) + 1
+  })
+  const tags = Object.keys(counts).sort((a, b) => a.localeCompare(b, 'no'))
+
+  // Administrer-knapp: berre vis om det finst kategoriar overhovudet
+  const mgBtn = document.getElementById('btnManageTags')
+  if (mgBtn) mgBtn.style.display = getAllCategories().length > 0 ? '' : 'none'
+
+  if (tags.length === 0) return
+
+  // "Alle"-chip
+  const all = document.createElement('button')
+  all.className = 'tag-chip' + (activeTag === null ? ' active' : '')
+  all.innerHTML = `Alle <span class="tag-count">${allQuizzes.length}</span>`
+  all.onclick = () => { activeTag = null; renderTagChips(); applyFilters() }
+  wrap.appendChild(all)
+
+  tags.forEach(t => {
+    const chip = document.createElement('button')
+    chip.className = 'tag-chip' + (activeTag === t ? ' active' : '')
+    chip.innerHTML = `${escHtml(t)} <span class="tag-count">${counts[t]}</span>`
+    chip.onclick = () => { activeTag = (activeTag === t ? null : t); renderTagChips(); applyFilters() }
+    wrap.appendChild(chip)
+  })
+}
+
+// ── KATEGORI-DROPDOWN i opprett-modal ──
+function populateCategorySelect() {
+  const sel = document.getElementById('newTagSelect')
+  if (!sel) return
+  const cats = getAllCategories()
+  // Behald første ("Ingen kategori") og siste ("+ Ny kategori...")
+  sel.innerHTML = ''
+  sel.appendChild(new Option('— Ingen kategori —', ''))
+  cats.forEach(c => sel.appendChild(new Option(c, c)))
+  sel.appendChild(new Option('+ Ny kategori…', '__new__'))
+  sel.value = ''
+  // Skjul nytt-rad om opent
+  const row = document.getElementById('tagNewRow')
+  if (row) row.style.display = 'none'
+  const inp = document.getElementById('newTag')
+  if (inp) inp.value = ''
+}
+
+function onTagSelectChange(value) {
+  const row = document.getElementById('tagNewRow')
+  const inp = document.getElementById('newTag')
+  if (value === '__new__') {
+    row.style.display = ''
+    setTimeout(() => inp && inp.focus(), 50)
+  } else {
+    row.style.display = 'none'
+    if (inp) inp.value = ''
+  }
+}
+
+function cancelNewTag() {
+  const sel = document.getElementById('newTagSelect')
+  if (sel) sel.value = ''
+  const row = document.getElementById('tagNewRow')
+  if (row) row.style.display = 'none'
+  const inp = document.getElementById('newTag')
+  if (inp) inp.value = ''
+}
+
+// Returner valt kategori (frå dropdown eller nytt-input)
+function getSelectedTagFromModal() {
+  const sel = document.getElementById('newTagSelect')
+  if (!sel) return ''
+  if (sel.value === '__new__') {
+    const inp = document.getElementById('newTag')
+    return inp ? inp.value.trim() : ''
+  }
+  return sel.value || ''
+}
+
+// ── ADMINISTRER-MODAL ──
+function openManageModal() {
+  document.getElementById('manageOverlay').classList.add('open')
+  renderCategoryList()
+}
+function closeManageModal() {
+  document.getElementById('manageOverlay').classList.remove('open')
+}
+function closeManageModalIfBg(e) {
+  if (e.target === document.getElementById('manageOverlay')) closeManageModal()
+}
+
+function renderCategoryList() {
+  const list = document.getElementById('categoryList')
+  if (!list) return
+  list.innerHTML = ''
+
+  const cats   = getAllCategories()
+  const counts = countByCategory()
+
+  if (cats.length === 0) {
+    list.innerHTML = `<div class="category-empty">Du har ingen kategoriar enno.<br>Lag ein ved å opprette ein quiz med kategori.</div>`
+    return
+  }
+
+  cats.forEach(name => {
+    const row = document.createElement('div')
+    row.className = 'category-row'
+    row.dataset.name = name
+
+    row.innerHTML = `
+      <span class="category-name">${escHtml(name)}</span>
+      <span class="category-count">${counts[name] || 0} quiz${counts[name] === 1 ? '' : 'zar'}</span>
+      <button class="cat-icon-btn" data-action="edit" title="Endre namn">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+          <path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        </svg>
+      </button>
+      <button class="cat-icon-btn danger" data-action="delete" title="Slett kategori">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <polyline points="3 6 5 6 21 6"/>
+          <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/>
+          <path d="M10 11v6M14 11v6"/>
+          <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/>
+        </svg>
+      </button>`
+
+    row.querySelector('[data-action="edit"]').onclick = () => startEditCategory(row, name)
+    row.querySelector('[data-action="delete"]').onclick = () => askDeleteCategory(name)
+
+    list.appendChild(row)
+  })
+}
+
+function startEditCategory(row, oldName) {
+  row.innerHTML = `
+    <input class="category-name-input" type="text" value="${escAttr(oldName)}" maxlength="24" />
+    <button class="cat-icon-btn save" data-action="save" title="Lagre">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+        <polyline points="20 6 9 17 4 12"/>
+      </svg>
+    </button>
+    <button class="cat-icon-btn" data-action="cancel" title="Avbryt">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>`
+  const input = row.querySelector('input')
+  input.focus()
+  input.select()
+
+  const commit = () => {
+    const newName = input.value.trim()
+    if (!newName || newName === oldName) return renderCategoryList()
+    // Hindra kollisjon med eksisterande namn (då samanslår vi)
+    if (renameCategory(oldName, newName)) {
+      showToast(`✏️ Endra til "${newName}"`)
+      // Hald activeTag synkronisert om brukaren filtrerte på det gamle namnet
+      if (activeTag === oldName) activeTag = newName
+      renderCategoryList()
+      renderTagChips()
+      applyFilters()
+    } else {
+      renderCategoryList()
+    }
+  }
+  row.querySelector('[data-action="save"]').onclick = commit
+  row.querySelector('[data-action="cancel"]').onclick = () => renderCategoryList()
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') commit()
+    if (e.key === 'Escape') renderCategoryList()
+  })
+}
+
+function askDeleteCategory(name) {
+  const counts = countByCategory()
+  const n = counts[name] || 0
+  const msg = n > 0
+    ? `Slette kategorien "${name}"?\n${n} quiz${n === 1 ? '' : 'zar'} blir utan kategori.`
+    : `Slette kategorien "${name}"?`
+  if (!confirm(msg)) return
+  deleteCategory(name)
+  if (activeTag === name) activeTag = null
+  showToast(`🗑️ Sletta "${name}"`)
+  renderCategoryList()
+  renderTagChips()
+  applyFilters()
+}
+
+// ── SEARCH + TAG-FILTER ──
+function applyFilters() {
+  const term   = currentSearch.toLowerCase()
+  const tagMap = loadTags()
+
+  const list = allQuizzes.filter(q => {
+    const nameOk = !term || (q.name || '').toLowerCase().includes(term)
+    const tagOk  = !activeTag || tagMap[q.id] === activeTag
+    return nameOk && tagOk
+  })
+
+  renderQuizzes(list)
 }
 
 // ── SEARCH ──
 function filterQuizzes(q) {
-  const term = (q || '').toLowerCase()
-  renderQuizzes(allQuizzes.filter(quiz => (quiz.name || '').toLowerCase().includes(term)))
+  currentSearch = q || ''
+  applyFilters()
 }
 
 // ── CREATE MODAL ──
 function openModal() {
+  populateCategorySelect()
   document.getElementById('modalOverlay').classList.add('open')
   setTimeout(() => document.getElementById('newName').focus(), 150)
 }
 function closeModal() {
   document.getElementById('modalOverlay').classList.remove('open')
   document.getElementById('newName').value = ''
+  cancelNewTag()
+  const sel = document.getElementById('newTagSelect')
+  if (sel) sel.value = ''
 }
 function closeModalIfBg(e) {
   if (e.target === document.getElementById('modalOverlay')) closeModal()
@@ -297,8 +610,10 @@ async function confirmDeleteQuiz() {
     if (error) throw error
 
     allQuizzes = allQuizzes.filter(q => q.id !== id)
-    renderQuizzes(allQuizzes)
-    updateStats(allQuizzes)
+    setTag(id, '') // fjern tag-mapping for sletta quiz
+    updateHeaderStats()
+    renderTagChips()
+    applyFilters()
     showToast('🗑️ Quiz sletta')
   } catch (err) {
     console.error(err)
@@ -333,8 +648,12 @@ async function createQuiz() {
     const { data, error } = await db.from('quizzes').insert(newQuiz).select().single()
     if (error) throw error
     allQuizzes.unshift(data)
-    renderQuizzes(allQuizzes)
-    updateStats(allQuizzes)
+    // lagre tag (frå dropdown eller nytt-input)
+    const tagVal = getSelectedTagFromModal()
+    if (tagVal) setTag(data.id, tagVal)
+    updateHeaderStats()
+    renderTagChips()
+    applyFilters()
     closeModal()
     showToast('✅ Quiz oppretta!')
   } catch (err) {
@@ -379,8 +698,12 @@ document.addEventListener('keydown', e => {
     closeModal()
     closeQrModal()
     closeDeleteModal()
+    closeManageModal()
   }
   if (e.key === 'Enter' && document.getElementById('modalOverlay').classList.contains('open')) {
+    // Ikkje submit om brukaren skriv i ny-tag-feltet (då skal Enter lukka det)
+    const newTag = document.getElementById('newTag')
+    if (newTag && document.activeElement === newTag) return
     createQuiz()
   }
 })
@@ -398,5 +721,10 @@ window.logout                 = logout
 window.confirmDeleteQuiz      = confirmDeleteQuiz
 window.closeDeleteModal       = closeDeleteModal
 window.closeDeleteModalIfBg   = closeDeleteModalIfBg
+window.onTagSelectChange      = onTagSelectChange
+window.cancelNewTag           = cancelNewTag
+window.openManageModal        = openManageModal
+window.closeManageModal       = closeManageModal
+window.closeManageModalIfBg   = closeManageModalIfBg
 
 init()

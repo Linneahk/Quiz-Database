@@ -41,7 +41,7 @@
     <div class="page-header">
       <div>
         <div class="page-title">Mine <span>quizzar</span></div>
-        <div class="page-subtitle">Opprett og administrer rebusløp og spørsmålsrunder</div>
+        <div class="page-subtitle" id="pageSubtitle">Lastar…</div>
       </div>
       <button class="btn-create" onclick="openModal()">
         <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24">
@@ -51,20 +51,20 @@
       </button>
     </div>
 
-    <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-label">Totalt</div>
-        <div class="stat-value" id="statTotal">–</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Aktive</div>
-        <div class="stat-value" id="statActive">–</div>
-      </div>
-    </div>
-
     <div class="section-header">
       <div class="section-title">Alle quizzar</div>
       <input class="search-input" type="search" placeholder="Søk…" oninput="filterQuizzes(this.value)" />
+    </div>
+
+    <div class="tag-row" id="tagRow">
+      <div class="tag-chips" id="tagChips"></div>
+      <button class="btn-manage-tags" id="btnManageTags" onclick="openManageModal()" style="display:none" title="Administrer kategoriar">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+        Administrer
+      </button>
     </div>
 
     <div class="quiz-grid" id="quizGrid">
@@ -82,6 +82,19 @@
         <div class="modal-field">
           <label>Namn</label>
           <input type="text" id="newName" placeholder="t.d. Norgesgeografi 6B" maxlength="60" />
+        </div>
+        <div class="modal-field">
+          <label>Kategori <span class="label-hint">(valfritt)</span></label>
+          <div class="tag-picker">
+            <select id="newTagSelect" class="tag-select" onchange="onTagSelectChange(this.value)">
+              <option value="">— Ingen kategori —</option>
+              <option value="__new__">+ Ny kategori…</option>
+            </select>
+            <div class="tag-new-row" id="tagNewRow" style="display:none">
+              <input type="text" id="newTag" placeholder="Skriv kategorinamn…" maxlength="24" />
+              <button type="button" class="tag-back-btn" onclick="cancelNewTag()" title="Avbryt">✕</button>
+            </div>
+          </div>
         </div>
         <div class="modal-field">
           <label>Farge</label>
@@ -124,6 +137,18 @@
       <div class="modal-actions" style="margin-top:8px">
         <button class="btn-cancel" onclick="closeDeleteModal()">Avbryt</button>
         <button class="btn-danger" id="deleteConfirmBtn" onclick="confirmDeleteQuiz()">Slett quiz</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADMINISTRER KATEGORIAR MODAL -->
+  <div class="modal-overlay" id="manageOverlay" onclick="closeManageModalIfBg(event)">
+    <div class="modal manage-modal">
+      <div class="modal-title">Administrer kategoriar</div>
+      <div class="modal-desc">Endre namn eller slett kategoriar. Slettar du ein kategori, blir alle quizzar i den utan kategori.</div>
+      <div class="category-list" id="categoryList"></div>
+      <div class="modal-actions" style="margin-top:16px">
+        <button class="btn-cancel" onclick="closeManageModal()" style="flex:1">Lukk</button>
       </div>
     </div>
   </div>
