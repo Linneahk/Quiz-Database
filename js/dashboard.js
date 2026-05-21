@@ -177,7 +177,7 @@ async function loadQuizzes() {
         .select('id, quiz_id, join_code, status, started_at')
         .eq('host_id', currentUser.id)
         .in('status', ['waiting', 'active'])
-        .order('started_at', { ascending: false })
+        .order('started_at', { ascending: false, nullsFirst: true })
       activeSessionsByQuiz = {}
       ;(activeSessions || []).forEach(s => {
         if (!activeSessionsByQuiz[s.quiz_id]) activeSessionsByQuiz[s.quiz_id] = s

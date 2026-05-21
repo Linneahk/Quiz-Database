@@ -617,7 +617,7 @@
           .eq('quiz_id', quizId)
           .eq('host_id', user.id)
           .in('status', ['waiting', 'active'])
-          .order('started_at', { ascending: false })
+          .order('started_at', { ascending: false, nullsFirst: true })
           .limit(1)
           .maybeSingle()
         existingSess = data
