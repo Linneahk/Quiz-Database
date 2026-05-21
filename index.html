@@ -1,597 +1,896 @@
 <!DOCTYPE html>
 <html lang="no">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stord Quiz – Bli med</title>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,900;1,700&family=Epilogue:wght@400;500;600&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg:#0f0f13;--surface:#1a1a24;--border:#2a2a3a;
-    --accent:#c8f050;--text:#f0f0f5;--muted:#7a7a9a;
-    --red:#ff4d6d;--green:#50f0a0;
-  }
-  *,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
-
-  /* ── BASE ── */
-  html,body{min-height:100%;}
-  body{
-    background:var(--bg);color:var(--text);
-    font-family:'Epilogue',sans-serif;
-    /* Centered layout for PIN/nick/wait/done screens */
-    display:flex;align-items:center;justify-content:center;
-    padding:clamp(.75rem,3vw,1.25rem);
-  }
-
-  /* When hunt is active, body becomes a plain block so hunt-screen fills viewport */
-  body.hunt-active{
-    display:block;
-    padding:0;
-  }
-
-  /* ── SCREENS ── */
-  .screen{
-    width:100%;max-width:440px;
-    display:flex;flex-direction:column;align-items:center;text-align:center;
-  }
-  .screen.hidden{display:none!important;}
-
-  /* Hunt screen overrides - full viewport, no max-width */
-  #hunt-screen{
-    max-width:100%;
-    text-align:left;
-    align-items:stretch;
-    min-height:100vh;
-    flex-direction:column;
-  }
-
-  /* Done screen stays centered */
-  #done-screen{max-width:440px;}
-
-  /* ── TYPOGRAPHY ── */
-  .logo{
-    font-family:'Fraunces',serif;font-weight:900;color:var(--accent);
-    font-size:clamp(1.2rem,3vw,1.4rem);
-    margin-bottom:clamp(1.25rem,4vw,2rem);
-  }
-  h1{
-    font-family:'Fraunces',serif;font-weight:900;line-height:1.1;
-    font-size:clamp(1.6rem,5vw,2.2rem);margin-bottom:.4rem;
-  }
-  .sub{
-    color:var(--muted);
-    font-size:clamp(.85rem,2.5vw,.95rem);
-    margin-bottom:clamp(1.25rem,4vw,1.75rem);
-  }
-
-  /* ── INPUTS ── */
-  .iw{width:100%;margin-bottom:1rem;}
-  input{
-    width:100%;background:var(--surface);border:2px solid var(--border);
-    border-radius:14px;padding:.85rem 1rem;
-    font-family:'Fraunces',serif;font-weight:700;color:var(--text);
-    text-align:center;letter-spacing:.12em;outline:none;transition:border-color .2s;
-    font-size:clamp(1.3rem,5vw,1.8rem);
-    -moz-appearance:textfield;
-  }
-  input::-webkit-outer-spin-button,
-  input::-webkit-inner-spin-button{-webkit-appearance:none;}
-  input:focus{border-color:var(--accent);}
-  input.sm{font-size:clamp(.95rem,3vw,1.15rem);letter-spacing:0;}
-  input::placeholder{
-    color:var(--muted);font-weight:400;letter-spacing:0;
-    font-family:'Epilogue',sans-serif;font-size:clamp(.85rem,2.5vw,1rem);
-  }
-
-  /* ── BUTTONS ── */
-  .btn{
-    width:100%;background:var(--accent);color:#0f0f13;border:none;
-    border-radius:14px;padding:.85rem 1rem;
-    font-family:'Fraunces',serif;font-weight:700;cursor:pointer;
-    font-size:clamp(.95rem,3vw,1.15rem);
-    transition:transform .15s,opacity .15s;
-    box-shadow:0 4px 20px rgba(200,240,80,.2);
-  }
-  .btn:hover{transform:translateY(-2px);}
-  .btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
-  .btn.ghost{
-    background:var(--surface);color:var(--text);
-    border:1px solid var(--border);box-shadow:none;margin-top:.6rem;
-  }
-
-  /* ── COLOR PICKER ── */
-  .crow{display:flex;gap:.5rem;justify-content:center;flex-wrap:wrap;margin-bottom:1.25rem;}
-  .cdot{
-    width:clamp(26px,5vw,32px);height:clamp(26px,5vw,32px);
-    border-radius:50%;cursor:pointer;
-    border:3px solid transparent;
-    transition:transform .15s,border-color .15s;flex-shrink:0;
-  }
-  .cdot.on{border-color:#fff;transform:scale(1.15);}
-
-  /* ── WAITING ── */
-  .pulse{
-    width:clamp(56px,12vw,72px);height:clamp(56px,12vw,72px);
-    border-radius:50%;border:3px solid var(--accent);
-    margin:0 auto 1.25rem;animation:pulse 2s ease-in-out infinite;
-    display:flex;align-items:center;justify-content:center;
-    font-size:clamp(1.4rem,5vw,1.8rem);
-  }
-  @keyframes pulse{
-    0%,100%{box-shadow:0 0 0 0 rgba(200,240,80,.35);}
-    50%{box-shadow:0 0 0 16px rgba(200,240,80,0);}
-  }
-  .chip{
-    background:var(--surface);border:1px solid var(--border);
-    border-radius:14px;padding:.85rem 2rem;margin-top:1.25rem;
-    width:100%;max-width:300px;
-  }
-  .chip .lbl{color:var(--muted);font-size:.78rem;margin-bottom:.2rem;}
-  .chip .nm{font-family:'Fraunces',serif;font-weight:700;font-size:clamp(1rem,4vw,1.2rem);}
-
-  /* ── LEAVE BUTTON ── */
-  .btn-leave{
-    display:inline-flex;align-items:center;gap:.4rem;
-    background:transparent;color:var(--red);border:1px solid var(--red);
-    border-radius:10px;padding:.4rem .9rem;
-    font-family:'Epilogue',sans-serif;font-size:clamp(.75rem,2vw,.82rem);font-weight:600;
-    cursor:pointer;transition:background .15s,color .15s;text-decoration:none;
-    white-space:nowrap;
-  }
-  .btn-leave:hover{background:var(--red);color:#fff;}
-
-  /* ── HUNT SCREEN ── */
-  .hunt-header{
-    background:var(--surface);border-bottom:1px solid var(--border);
-    padding:clamp(.65rem,2vw,.9rem) clamp(.75rem,3vw,1.25rem);
-    display:flex;align-items:center;justify-content:space-between;
-    gap:.5rem;flex-shrink:0;
-    position:sticky;top:0;z-index:10;
-  }
-  .hunt-logo{
-    font-family:'Fraunces',serif;font-weight:900;color:var(--accent);
-    font-size:clamp(.9rem,2.5vw,1.1rem);white-space:nowrap;
-  }
-  .hunt-score{
-    font-family:'Fraunces',serif;font-weight:900;
-    font-size:clamp(.9rem,2.5vw,1.1rem);white-space:nowrap;
-  }
-  .hunt-score span{color:var(--accent);}
-
-  .hunt-body{
-    padding:clamp(.75rem,3vw,1.25rem);
-    width:100%;max-width:640px;margin:0 auto;
-  }
-
-  /* Hunt card */
-  .hunt-go{
-    background:linear-gradient(135deg,#1a2a00,#2a4a00);
-    border:2px solid var(--accent);border-radius:20px;
-    padding:clamp(1rem,4vw,1.5rem);
-    margin-bottom:1.25rem;
-  }
-  .go-emoji{font-size:clamp(1.8rem,5vw,2.5rem);margin-bottom:.4rem;text-align:center;}
-  .hunt-go h2{
-    font-family:'Fraunces',serif;font-weight:900;color:var(--accent);
-    font-size:clamp(1.2rem,4vw,1.6rem);margin-bottom:.25rem;
-  }
-  .hunt-go p{color:var(--muted);font-size:clamp(.8rem,2.5vw,.9rem);}
-  .timer-display{
-    font-family:'Fraunces',serif;font-weight:900;color:var(--text);
-    font-size:clamp(1.6rem,6vw,2.2rem);margin-top:.5rem;
-  }
-
-  .btn-scan{
-    display:flex;align-items:center;justify-content:center;gap:.5rem;
-    background:var(--accent);color:#0f0f13;text-decoration:none;
-    border-radius:14px;padding:clamp(.75rem,2.5vw,.9rem) 1rem;
-    font-family:'Fraunces',serif;font-weight:700;
-    font-size:clamp(.95rem,3vw,1.1rem);
-    margin-top:1rem;width:100%;
-    transition:transform .15s,box-shadow .15s;
-    box-shadow:0 4px 20px rgba(200,240,80,.3);
-  }
-  .btn-scan:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(200,240,80,.4);}
-
-  /* Progress */
-  .progress-section{margin-bottom:1.25rem;}
-  .progress-label{
-    display:flex;justify-content:space-between;
-    font-size:clamp(.75rem,2.5vw,.85rem);color:var(--muted);margin-bottom:.5rem;
-  }
-  .progress-bar-wrap{height:10px;background:var(--border);border-radius:99px;overflow:hidden;}
-  .progress-bar{height:100%;background:var(--accent);border-radius:99px;transition:width .5s ease;}
-
-  /* Answered list */
-  .answered-title{
-    font-size:clamp(.7rem,2vw,.78rem);letter-spacing:.1em;
-    text-transform:uppercase;color:var(--muted);margin-bottom:.65rem;
-  }
-  .answered-list{display:flex;flex-direction:column;gap:.5rem;}
-  .ans-row{
-    display:flex;align-items:center;gap:.65rem;
-    background:var(--surface);border:1px solid var(--border);
-    border-radius:12px;
-    padding:clamp(.55rem,2vw,.75rem) clamp(.65rem,2.5vw,1rem);
-    font-size:clamp(.8rem,2.5vw,.9rem);
-  }
-  .ans-row.correct{border-color:#2d5a1b;}
-  .ans-row.wrong{border-color:#5a1b1b;}
-  .ans-icon{font-size:1rem;flex-shrink:0;}
-  .ans-text{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;}
-  .ans-pts{font-family:'Fraunces',serif;font-weight:700;color:var(--accent);font-size:.85rem;flex-shrink:0;}
-
-  /* ── DONE SCREEN ── */
-  .done-card{
-    background:var(--surface);border:2px solid var(--accent);
-    border-radius:20px;padding:clamp(1.5rem,5vw,2rem);
-    text-align:center;width:100%;
-    box-shadow:0 0 40px rgba(200,240,80,.1);
-  }
-  .done-trophy{font-size:clamp(3rem,10vw,4rem);margin-bottom:.65rem;}
-  .done-score{
-    font-family:'Fraunces',serif;font-weight:900;color:var(--accent);line-height:1;
-    font-size:clamp(3rem,10vw,4rem);
-  }
-  .done-time{color:var(--muted);font-size:clamp(.82rem,2.5vw,.95rem);margin-top:.5rem;}
-
-  /* ── MISC ── */
-  .tlink{
-    position:fixed;bottom:1rem;right:1rem;
-    font-size:clamp(.65rem,2vw,.75rem);color:var(--muted);
-    text-decoration:none;opacity:.4;transition:opacity .2s;
-  }
-  .tlink:hover{opacity:1;}
-  .toast{
-    position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);
-    background:var(--surface);border:1px solid var(--border);border-radius:12px;
-    padding:.6rem 1.2rem;font-size:clamp(.82rem,2.5vw,.9rem);
-    z-index:999;max-width:90vw;text-align:center;white-space:nowrap;
-  }
-
-  /* ── TABLET / DESKTOP (≥600px): hunt card goes side-by-side ── */
-  @media(min-width:600px){
-    .hunt-go{
-      display:grid;
-      grid-template-columns:1fr auto;
-      align-items:center;
-      gap:1.25rem;
-      text-align:left;
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stord Quiz – Bli med</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Fraunces:ital,wght@0,700;0,900;1,700&family=Epilogue:wght@400;500;600&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0f0f13;
+      --surface: #1a1a24;
+      --border: #2a2a3a;
+      --accent: #c8f050;
+      --text: #f0f0f5;
+      --muted: #7a7a9a;
+      --red: #ff4d6d;
+      --green: #50f0a0;
     }
-    .go-emoji{display:none;}
-    .btn-scan{width:auto;min-width:200px;margin-top:0;}
-    .hunt-body{max-width:720px;}
-  }
 
-  /* ── SMALL PHONES (≤360px) ── */
-  @media(max-width:360px){
-    .cdot{width:24px;height:24px;}
-    .hunt-header{gap:.35rem;}
-    .hunt-logo{font-size:.82rem;}
-    .hunt-score{font-size:.82rem;}
-  }
-</style>
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    /* ── BASE ── */
+    html,
+    body {
+      min-height: 100%;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Epilogue', sans-serif;
+      /* Centered layout for PIN/nick/wait/done screens */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: clamp(.75rem, 3vw, 1.25rem);
+    }
+
+    /* When hunt is active, body becomes a plain block so hunt-screen fills viewport */
+    body.hunt-active {
+      display: block;
+      padding: 0;
+    }
+
+    /* ── SCREENS ── */
+    .screen {
+      width: 100%;
+      max-width: 440px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+    }
+
+    .screen.hidden {
+      display: none !important;
+    }
+
+    /* Hunt screen overrides - full viewport, no max-width */
+    #hunt-screen {
+      max-width: 100%;
+      text-align: left;
+      align-items: stretch;
+      min-height: 100vh;
+      flex-direction: column;
+    }
+
+    /* Done screen stays centered */
+    #done-screen {
+      max-width: 440px;
+    }
+
+    /* ── TYPOGRAPHY ── */
+    .logo {
+      font-family: 'Fraunces', serif;
+      font-weight: 900;
+      color: var(--accent);
+      font-size: clamp(1.2rem, 3vw, 1.4rem);
+      margin-bottom: clamp(1.25rem, 4vw, 2rem);
+    }
+
+    h1 {
+      font-family: 'Fraunces', serif;
+      font-weight: 900;
+      line-height: 1.1;
+      font-size: clamp(1.6rem, 5vw, 2.2rem);
+      margin-bottom: .4rem;
+    }
+
+    .sub {
+      color: var(--muted);
+      font-size: clamp(.85rem, 2.5vw, .95rem);
+      margin-bottom: clamp(1.25rem, 4vw, 1.75rem);
+    }
+
+    /* ── INPUTS ── */
+    .iw {
+      width: 100%;
+      margin-bottom: 1rem;
+    }
+
+    input {
+      width: 100%;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      padding: .85rem 1rem;
+      font-family: 'Fraunces', serif;
+      font-weight: 700;
+      color: var(--text);
+      text-align: center;
+      letter-spacing: .12em;
+      outline: none;
+      transition: border-color .2s;
+      font-size: clamp(1.3rem, 5vw, 1.8rem);
+
+    }
+
+    input::-webkit-outer-spin-button,
+    input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+    }
+
+    input:focus {
+      border-color: var(--accent);
+    }
+
+    input.sm {
+      font-size: clamp(.95rem, 3vw, 1.15rem);
+      letter-spacing: 0;
+    }
+
+    input::placeholder {
+      color: var(--muted);
+      font-weight: 400;
+      letter-spacing: 0;
+      font-family: 'Epilogue', sans-serif;
+      font-size: clamp(.85rem, 2.5vw, 1rem);
+    }
+
+    /* ── BUTTONS ── */
+    .btn {
+      width: 100%;
+      background: var(--accent);
+      color: #0f0f13;
+      border: none;
+      border-radius: 14px;
+      padding: .85rem 1rem;
+      font-family: 'Fraunces', serif;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: clamp(.95rem, 3vw, 1.15rem);
+      transition: transform .15s, opacity .15s;
+      box-shadow: 0 4px 20px rgba(200, 240, 80, .2);
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .btn:disabled {
+      opacity: .4;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn.ghost {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+      box-shadow: none;
+      margin-top: .6rem;
+    }
+
+    /* ── COLOR PICKER ── */
+    .crow {
+      display: flex;
+      gap: .5rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 1.25rem;
+    }
+
+    .cdot {
+      width: clamp(26px, 5vw, 32px);
+      height: clamp(26px, 5vw, 32px);
+      border-radius: 50%;
+      cursor: pointer;
+      border: 3px solid transparent;
+      transition: transform .15s, border-color .15s;
+      flex-shrink: 0;
+    }
+
+    .cdot.on {
+      border-color: #fff;
+      transform: scale(1.15);
+    }
+
+    /* ── WAITING ── */
+    .pulse {
+      width: clamp(56px, 12vw, 72px);
+      height: clamp(56px, 12vw, 72px);
+      border-radius: 50%;
+      border: 3px solid var(--accent);
+      margin: 0 auto 1.25rem;
+      animation: pulse 2s ease-in-out infinite;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: clamp(1.4rem, 5vw, 1.8rem);
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 0 0 rgba(200, 240, 80, .35);
+      }
+
+      50% {
+        box-shadow: 0 0 0 16px rgba(200, 240, 80, 0);
+      }
+    }
+
+    .chip {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: .85rem 2rem;
+      margin-top: 1.25rem;
+      width: 100%;
+      max-width: 300px;
+    }
+
+    .chip .lbl {
+      color: var(--muted);
+      font-size: .78rem;
+      margin-bottom: .2rem;
+    }
+
+    .chip .nm {
+      font-family: 'Fraunces', serif;
+      font-weight: 700;
+      font-size: clamp(1rem, 4vw, 1.2rem);
+    }
+
+    /* ── LEAVE BUTTON ── */
+    .btn-leave {
+      display: inline-flex;
+      align-items: center;
+      gap: .4rem;
+      background: transparent;
+      color: var(--red);
+      border: 1px solid var(--red);
+      border-radius: 10px;
+      padding: .4rem .9rem;
+      font-family: 'Epilogue', sans-serif;
+      font-size: clamp(.75rem, 2vw, .82rem);
+      font-weight: 600;
+      cursor: pointer;
+      transition: background .15s, color .15s;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+
+    .btn-leave:hover {
+      background: var(--red);
+      color: #fff;
+    }
+
+    /* ── HUNT SCREEN ── */
+    .hunt-header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: clamp(.65rem, 2vw, .9rem) clamp(.75rem, 3vw, 1.25rem);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: .5rem;
+      flex-shrink: 0;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+
+    .hunt-logo {
+      font-family: 'Fraunces', serif;
+      font-weight: 900;
+      color: var(--accent);
+      font-size: clamp(.9rem, 2.5vw, 1.1rem);
+      white-space: nowrap;
+    }
+
+    .hunt-score {
+      font-family: 'Fraunces', serif;
+      font-weight: 900;
+      font-size: clamp(.9rem, 2.5vw, 1.1rem);
+      white-space: nowrap;
+    }
+
+    .hunt-score span {
+      color: var(--accent);
+    }
+
+    .hunt-body {
+      padding: clamp(.75rem, 3vw, 1.25rem);
+      width: 100%;
+      max-width: 640px;
+      margin: 0 auto;
+    }
+
+    /* Hunt card */
+    .hunt-go {
+      background: linear-gradient(135deg, #1a2a00, #2a4a00);
+      border: 2px solid var(--accent);
+      border-radius: 20px;
+      padding: clamp(1rem, 4vw, 1.5rem);
+      margin-bottom: 1.25rem;
+    }
+
+    .go-emoji {
+      font-size: clamp(1.8rem, 5vw, 2.5rem);
+      margin-bottom: .4rem;
+      text-align: center;
+    }
+
+    .hunt-go h2 {
+      font-family: 'Fraunces', serif;
+      font-weight: 900;
+      color: var(--accent);
+      font-size: clamp(1.2rem, 4vw, 1.6rem);
+      margin-bottom: .25rem;
+    }
+
+    .hunt-go p {
+      color: var(--muted);
+      font-size: clamp(.8rem, 2.5vw, .9rem);
+    }
+
+    .timer-display {
+      font-family: 'Fraunces', serif;
+      font-weight: 900;
+      color: var(--text);
+      font-size: clamp(1.6rem, 6vw, 2.2rem);
+      margin-top: .5rem;
+    }
+
+    .btn-scan {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: .5rem;
+      background: var(--accent);
+      color: #0f0f13;
+      text-decoration: none;
+      border-radius: 14px;
+      padding: clamp(.75rem, 2.5vw, .9rem) 1rem;
+      font-family: 'Fraunces', serif;
+      font-weight: 700;
+      font-size: clamp(.95rem, 3vw, 1.1rem);
+      margin-top: 1rem;
+      width: 100%;
+      transition: transform .15s, box-shadow .15s;
+      box-shadow: 0 4px 20px rgba(200, 240, 80, .3);
+    }
+
+    .btn-scan:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(200, 240, 80, .4);
+    }
+
+    /* Progress */
+    .progress-section {
+      margin-bottom: 1.25rem;
+    }
+
+    .progress-label {
+      display: flex;
+      justify-content: space-between;
+      font-size: clamp(.75rem, 2.5vw, .85rem);
+      color: var(--muted);
+      margin-bottom: .5rem;
+    }
+
+    .progress-bar-wrap {
+      height: 10px;
+      background: var(--border);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: var(--accent);
+      border-radius: 99px;
+      transition: width .5s ease;
+    }
+
+    /* Answered list */
+    .answered-title {
+      font-size: clamp(.7rem, 2vw, .78rem);
+      letter-spacing: .1em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: .65rem;
+    }
+
+    .answered-list {
+      display: flex;
+      flex-direction: column;
+      gap: .5rem;
+    }
+
+    .ans-row {
+      display: flex;
+      align-items: center;
+      gap: .65rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: clamp(.55rem, 2vw, .75rem) clamp(.65rem, 2.5vw, 1rem);
+      font-size: clamp(.8rem, 2.5vw, .9rem);
+    }
+
+    .ans-row.correct {
+      border-color: #2d5a1b;
+    }
+
+    .ans-row.wrong {
+      border-color: #5a1b1b;
+    }
+
+    .ans-icon {
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+
+    .ans-text {
+      flex: 1;
+      text-align: left;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      min-width: 0;
+    }
+
+    .ans-pts {
+      font-family: 'Fraunces', serif;
+      font-weight: 700;
+      color: var(--accent);
+      font-size: .85rem;
+      flex-shrink: 0;
+    }
+
+    /* ── DONE SCREEN ── */
+    .done-card {
+      background: var(--surface);
+      border: 2px solid var(--accent);
+      border-radius: 20px;
+      padding: clamp(1.5rem, 5vw, 2rem);
+      text-align: center;
+      width: 100%;
+      box-shadow: 0 0 40px rgba(200, 240, 80, .1);
+    }
+
+    .done-trophy {
+      font-size: clamp(3rem, 10vw, 4rem);
+      margin-bottom: .65rem;
+    }
+
+    .done-score {
+      font-family: 'Fraunces', serif;
+      font-weight: 900;
+      color: var(--accent);
+      line-height: 1;
+      font-size: clamp(3rem, 10vw, 4rem);
+    }
+
+    .done-time {
+      color: var(--muted);
+      font-size: clamp(.82rem, 2.5vw, .95rem);
+      margin-top: .5rem;
+    }
+
+    /* ── MISC ── */
+    .tlink {
+      position: fixed;
+      bottom: 1rem;
+      right: 1rem;
+      font-size: clamp(.65rem, 2vw, .75rem);
+      color: var(--muted);
+      text-decoration: none;
+      opacity: .4;
+      transition: opacity .2s;
+    }
+
+    .tlink:hover {
+      opacity: 1;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 1.5rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: .6rem 1.2rem;
+      font-size: clamp(.82rem, 2.5vw, .9rem);
+      z-index: 999;
+      max-width: 90vw;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    /* ── TABLET / DESKTOP (≥600px): hunt card goes side-by-side ── */
+    @media(min-width:600px) {
+      .hunt-go {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        align-items: center;
+        gap: 1.25rem;
+        text-align: left;
+      }
+
+      .go-emoji {
+        display: none;
+      }
+
+      .btn-scan {
+        width: auto;
+        min-width: 200px;
+        margin-top: 0;
+      }
+
+      .hunt-body {
+        max-width: 720px;
+      }
+    }
+
+    /* ── SMALL PHONES (≤360px) ── */
+    @media(max-width:360px) {
+      .cdot {
+        width: 24px;
+        height: 24px;
+      }
+
+      .hunt-header {
+        gap: .35rem;
+      }
+
+      .hunt-logo {
+        font-size: .82rem;
+      }
+
+      .hunt-score {
+        font-size: .82rem;
+      }
+    }
+  </style>
 </head>
+
 <body>
 
-<!-- PIN -->
-<div id="pin-screen" class="screen">
-  <div class="logo">Stord Quiz</div>
-  <h1>Bli med!</h1>
-  <p class="sub">Skriv inn PIN-koden frå læraren</p>
-  <div class="iw">
-    <input id="pin-inp" type="number" placeholder="000000" maxlength="6"
-      oninput="this.value=this.value.slice(0,6)"
-      onkeydown="if(event.key==='Enter')checkPin()">
-  </div>
-  <button class="btn" onclick="checkPin()">Neste →</button>
-</div>
-
-<!-- NICKNAME -->
-<div id="nick-screen" class="screen hidden">
-  <div class="logo">Stord Quiz</div>
-  <h1>Kva heiter du?</h1>
-  <p class="sub">Vel eit kallenamn og farge</p>
-  <div class="iw">
-    <input id="nick-inp" class="sm" type="text" placeholder="Ditt kallenamn" maxlength="20"
-      onkeydown="if(event.key==='Enter')joinGame()">
-  </div>
-  <div class="crow" id="crow"></div>
-  <button class="btn" onclick="joinGame()">Bli med! 🎮</button>
-  <button class="btn ghost" onclick="show('pin-screen')">← Tilbake</button>
-</div>
-
-<!-- WAITING FOR TEACHER -->
-<div id="wait-screen" class="screen hidden">
-  <div class="logo">Stord Quiz</div>
-  <div class="pulse">⏳</div>
-  <h1 id="wait-name">Quiz</h1>
-  <p class="sub">Du er med! Ventar på at læraren startar jakta…</p>
-  <div class="chip">
-    <div class="lbl">Du spelar som</div>
-    <div class="nm" id="wait-nick"></div>
-  </div>
-  <button class="btn-leave" style="margin-top:1.5rem;" onclick="leaveQuiz()">Forlat quiz</button>
-</div>
-
-<!-- HUNT IN PROGRESS -->
-<div id="hunt-screen" class="screen hidden">
-  <div class="hunt-header">
-    <span class="hunt-logo">🏃 Stord Quiz</span>
-    <div class="hunt-score">⭐ <span id="hunt-score">0</span> poeng</div>
-    <button class="btn-leave" onclick="leaveQuiz()">Forlat quiz</button>
-  </div>
-  <div class="hunt-body">
-    <div class="hunt-go">
-      <div class="go-emoji">🔍</div>
-      <h2>Jakt på QR-kodar!</h2>
-      <p>Skann QR-kodar du finn og svar på spørsmåla</p>
-      <div class="timer-display" id="hunt-timer">00:00</div>
-      <a href="QR-scan.html" class="btn-scan">📷 Skann QR-kode</a>
+  <!-- PIN -->
+  <div id="pin-screen" class="screen">
+    <div class="logo">Stord Quiz</div>
+    <h1>Bli med!</h1>
+    <p class="sub">Skriv inn PIN-koden frå læraren</p>
+    <div class="iw">
+      <input id="pin-inp" type="number" placeholder="000000" maxlength="6" oninput="this.value=this.value.slice(0,6)"
+        onkeydown="if(event.key==='Enter')checkPin()">
     </div>
+    <button class="btn" onclick="checkPin()">Neste →</button>
+  </div>
 
-    <div class="progress-section">
-      <div class="progress-label">
-        <span>Framgang</span>
-        <span id="progress-text">0 av 0 spørsmål</span>
+  <!-- NICKNAME -->
+  <div id="nick-screen" class="screen hidden">
+    <div class="logo">Stord Quiz</div>
+    <h1>Kva heiter du?</h1>
+    <p class="sub">Vel eit kallenamn og farge</p>
+    <div class="iw">
+      <input id="nick-inp" class="sm" type="text" placeholder="Ditt kallenamn" maxlength="20"
+        onkeydown="if(event.key==='Enter')joinGame()">
+    </div>
+    <div class="crow" id="crow"></div>
+    <button class="btn" onclick="joinGame()">Bli med! 🎮</button>
+    <button class="btn ghost" onclick="show('pin-screen')">← Tilbake</button>
+  </div>
+
+  <!-- WAITING FOR TEACHER -->
+  <div id="wait-screen" class="screen hidden">
+    <div class="logo">Stord Quiz</div>
+    <div class="pulse">⏳</div>
+    <h1 id="wait-name">Quiz</h1>
+    <p class="sub">Du er med! Ventar på at læraren startar jakta…</p>
+    <div class="chip">
+      <div class="lbl">Du spelar som</div>
+      <div class="nm" id="wait-nick"></div>
+    </div>
+    <button class="btn-leave" style="margin-top:1.5rem;" onclick="leaveQuiz()">Forlat quiz</button>
+  </div>
+
+  <!-- HUNT IN PROGRESS -->
+  <div id="hunt-screen" class="screen hidden">
+    <div class="hunt-header">
+      <span class="hunt-logo">🏃 Stord Quiz</span>
+      <div class="hunt-score">⭐ <span id="hunt-score">0</span> poeng</div>
+      <button class="btn-leave" onclick="leaveQuiz()">Forlat quiz</button>
+    </div>
+    <div class="hunt-body">
+      <div class="hunt-go">
+        <div class="go-emoji">🔍</div>
+        <h2>Jakt på QR-kodar!</h2>
+        <p>Skann QR-kodar du finn og svar på spørsmåla</p>
+        <div class="timer-display" id="hunt-timer">00:00</div>
+        <a href="QR-scan.html" class="btn-scan">📷 Skann QR-kode</a>
       </div>
-      <div class="progress-bar-wrap">
-        <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+
+      <div class="progress-section">
+        <div class="progress-label">
+          <span>Framgang</span>
+          <span id="progress-text">0 av 0 spørsmål</span>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar" id="progress-bar" style="width:0%"></div>
+        </div>
+      </div>
+
+      <div class="answered-title">Svar so langt</div>
+      <div class="answered-list" id="answered-list">
+        <p style="color:var(--muted);font-size:.85rem;text-align:center;padding:.5rem;">Ingen svar enno — finn ein
+          QR-kode!</p>
       </div>
     </div>
+  </div>
 
-    <div class="answered-title">Svar so langt</div>
-    <div class="answered-list" id="answered-list">
-      <p style="color:var(--muted);font-size:.85rem;text-align:center;padding:.5rem;">Ingen svar enno — finn ein QR-kode!</p>
+  <!-- ALL DONE -->
+  <div id="done-screen" class="screen hidden">
+    <div class="done-card">
+      <div class="done-trophy">🏆</div>
+      <h1 style="margin-bottom:.5rem;">Fullført!</h1>
+      <div class="done-score" id="done-score">0</div>
+      <p style="color:var(--muted);margin-top:.25rem;font-size:.9rem;">poeng totalt</p>
+      <div class="done-time" id="done-time"></div>
+      <p style="color:var(--muted);font-size:.85rem;margin-top:1rem;">Gå tilbake til læraren for å sjå resultata!</p>
     </div>
   </div>
-</div>
 
-<!-- ALL DONE -->
-<div id="done-screen" class="screen hidden">
-  <div class="done-card">
-    <div class="done-trophy">🏆</div>
-    <h1 style="margin-bottom:.5rem;">Fullført!</h1>
-    <div class="done-score" id="done-score">0</div>
-    <p style="color:var(--muted);margin-top:.25rem;font-size:.9rem;">poeng totalt</p>
-    <div class="done-time" id="done-time"></div>
-    <p style="color:var(--muted);font-size:.85rem;margin-top:1rem;">Gå tilbake til læraren for å sjå resultata!</p>
-  </div>
-</div>
+  <a href="login.html" class="tlink">Lærar? Logg inn →</a>
 
-<a href="login.html" class="tlink">Lærar? Logg inn →</a>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
+    const SUPABASE_URL = 'https://owgldsfxpmzpkipgeksr.supabase.co'
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93Z2xkc2Z4cG16cGtpcGdla3NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4MDM2NTYsImV4cCI6MjA5MjM3OTY1Nn0.bD5dNHcQfjjq29DprTnVafxuZeCvt30zu0qQItq6AXY'
+    const sb = createClient(SUPABASE_URL, SUPABASE_KEY)
 
-<script type="module">
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
-const SUPABASE_URL = 'https://owgldsfxpmzpkipgeksr.supabase.co'
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im93Z2xkc2Z4cG16cGtpcGdla3NyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY4MDM2NTYsImV4cCI6MjA5MjM3OTY1Nn0.bD5dNHcQfjjq29DprTnVafxuZeCvt30zu0qQItq6AXY'
-const sb = createClient(SUPABASE_URL, SUPABASE_KEY)
+    const COLORS = ['#ff4d6d', '#4d9fff', '#50f0a0', '#f0c050', '#c8f050', '#7c6cff', '#ff9f50', '#f050c8', '#50c8f0', '#a0f050']
+    let chosenColor = COLORS[0]
+    let sessionId = null, quizId = null, playerId = null, totalQs = 0
+    let huntStartTime = null, timerInt = null, channel = null
+    let answeredQuestions = [] // local cache of answered questions
 
-const COLORS = ['#ff4d6d','#4d9fff','#50f0a0','#f0c050','#c8f050','#7c6cff','#ff9f50','#f050c8','#50c8f0','#a0f050']
-let chosenColor = COLORS[0]
-let sessionId = null, quizId = null, playerId = null, totalQs = 0
-let huntStartTime = null, timerInt = null, channel = null
-let answeredQuestions = [] // local cache of answered questions
+    // Restore identity if already joined (page refresh)
+    // Restore hunt timer from localStorage if page was refreshed mid-hunt
+    const savedHuntStart = localStorage.getItem('quiz_hunt_start')
+    if (savedHuntStart) huntStartTime = parseInt(savedHuntStart)
 
-// Restore identity if already joined (page refresh)
-// Restore hunt timer from localStorage if page was refreshed mid-hunt
-const savedHuntStart = localStorage.getItem('quiz_hunt_start')
-if (savedHuntStart) huntStartTime = parseInt(savedHuntStart)
-
-const savedIdentity = JSON.parse(localStorage.getItem('quiz_identity') || 'null')
-if (savedIdentity?.playerId) {
-  restoreSession(savedIdentity)
-} else {
-  buildColorPicker()
-}
-
-function buildColorPicker() {
-  const row = document.getElementById('crow')
-  COLORS.forEach((c, i) => {
-    const d = document.createElement('div')
-    d.className = 'cdot' + (i === 0 ? ' on' : '')
-    d.style.background = c
-    d.onclick = () => { document.querySelectorAll('.cdot').forEach(x => x.classList.remove('on')); d.classList.add('on'); chosenColor = c }
-    row.appendChild(d)
-  })
-}
-
-async function restoreSession(identity) {
-  sessionId = identity.sessionId; quizId = identity.quizId; playerId = identity.playerId
-  // Check session status
-  const { data: sess } = await sb.from('sessions').select('status,quizzes(name,question_count)').eq('id', sessionId).single()
-  if (!sess) { localStorage.removeItem('quiz_identity'); buildColorPicker(); show('pin-screen'); return }
-  totalQs = sess.quizzes?.question_count || 0
-  if (sess.status === 'waiting') {
-    document.getElementById('wait-name').textContent = sess.quizzes?.name || 'Quiz'
-    document.getElementById('wait-nick').textContent = identity.nickname || ''
-    show('wait-screen'); subscribeToSession()
-  } else if (sess.status === 'active') {
-    document.body.classList.add('hunt-active')
-    await startHunt(true)
-  } else {
-    document.body.classList.add('hunt-active')
-    await startHunt(true)
-  }
-}
-
-function show(id) {
-  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'))
-  document.getElementById(id).classList.remove('hidden')
-}
-window.show = show
-
-// ── CHECK PIN ──
-window.checkPin = async function() {
-  // Clear any previous hunt data
-  localStorage.removeItem('quiz_hunt_start')
-  const pin = document.getElementById('pin-inp').value.trim()
-  if (pin.length !== 6) return toast('PIN må vere 6 siffer')
-  const { data: s } = await sb.from('sessions').select('id,quiz_id,status,quizzes(name,question_count)').eq('join_code', pin).in('status', ['waiting','active']).single()
-  if (!s) return toast('Fann ingen aktiv quiz med den PIN-koden')
-  sessionId = s.id; quizId = s.quiz_id; totalQs = s.quizzes?.question_count || 0
-  document.getElementById('wait-name').textContent = s.quizzes?.name || 'Quiz'
-  show('nick-screen')
-  buildColorPicker()
-}
-
-// ── JOIN ──
-window.joinGame = async function() {
-  const nick = document.getElementById('nick-inp').value.trim()
-  if (!nick) return toast('Skriv inn eit kallenamn')
-  const { data: p, error } = await sb.from('session_players').insert({ session_id: sessionId, nickname: nick, avatar_color: chosenColor }).select().single()
-  if (error) return toast('Kunne ikkje bli med: ' + error.message)
-  playerId = p.id
-  // Save identity to localStorage so QR page can use it
-  localStorage.setItem('quiz_identity', JSON.stringify({ sessionId, quizId, playerId, nickname: nick }))
-  document.getElementById('wait-nick').textContent = nick
-  show('wait-screen')
-  subscribeToSession()
-}
-
-// ── REALTIME: listen for game_start from teacher ──
-function subscribeToSession() {
-  channel = sb.channel('session:' + sessionId)
-  channel.on('broadcast', { event: 'game_start' }, async () => {
-    await startHunt(false)
-  })
-  channel.on('broadcast', { event: 'game_over' }, () => {
-    endHunt()
-  })
-  // Listen for own answers being added (realtime update when returning from question page)
-  channel.on('postgres_changes', {
-    event: 'INSERT', schema: 'public', table: 'session_answers',
-    filter: `player_id=eq.${playerId}`
-  }, (payload) => {
-    refreshAnswers()
-  })
-  channel.subscribe()
-}
-
-// Refresh answers when student returns from question.html (tab becomes visible again)
-document.addEventListener('visibilitychange', () => {
-  if (!document.hidden && playerId) refreshAnswers()
-})
-
-// ── START HUNT ──
-async function startHunt(alreadyStarted) {
-  if (!alreadyStarted) {
-    // First time starting — record start time
-    huntStartTime = Date.now()
-    localStorage.setItem('quiz_hunt_start', String(huntStartTime))
-    await sb.from('session_players').update({ hunt_started_at: new Date().toISOString() }).eq('id', playerId)
-  } else {
-    // Restoring after refresh — use saved start time from localStorage
-    const saved = localStorage.getItem('quiz_hunt_start')
-    if (saved) {
-      huntStartTime = parseInt(saved)
+    const savedIdentity = JSON.parse(localStorage.getItem('quiz_identity') || 'null')
+    if (savedIdentity?.playerId) {
+      restoreSession(savedIdentity)
     } else {
-      // Fallback: fetch from DB
-      const { data: pl } = await sb.from('session_players').select('hunt_started_at').eq('id', playerId).single()
-      huntStartTime = pl?.hunt_started_at ? new Date(pl.hunt_started_at).getTime() : Date.now()
-      localStorage.setItem('quiz_hunt_start', String(huntStartTime))
+      buildColorPicker()
     }
-  }
-  document.body.classList.add('hunt-active')
-  show('hunt-screen')
-  startHuntTimer()
-  await refreshAnswers()
-  // Subscribe if not already
-  if (!channel) subscribeToSession()
-}
 
-// ── TIMER ──
-function startHuntTimer() {
-  clearInterval(timerInt)
-  timerInt = setInterval(() => {
-    const elapsed = Math.floor((Date.now() - huntStartTime) / 1000)
-    const m = String(Math.floor(elapsed / 60)).padStart(2, '0')
-    const s = String(elapsed % 60).padStart(2, '0')
-    const el = document.getElementById('hunt-timer')
-    if (el) el.textContent = `${m}:${s}`
-  }, 1000)
-}
+    function buildColorPicker() {
+      const row = document.getElementById('crow')
+      COLORS.forEach((c, i) => {
+        const d = document.createElement('div')
+        d.className = 'cdot' + (i === 0 ? ' on' : '')
+        d.style.background = c
+        d.onclick = () => { document.querySelectorAll('.cdot').forEach(x => x.classList.remove('on')); d.classList.add('on'); chosenColor = c }
+        row.appendChild(d)
+      })
+    }
 
-// ── REFRESH ANSWERS ──
-async function refreshAnswers() {
-  const { data: answers } = await sb
-    .from('session_answers')
-    .select('question_id, selected_option, is_correct, points_earned, questions(question_text)')
-    .eq('player_id', playerId)
-    .eq('session_id', sessionId)
+    async function restoreSession(identity) {
+      sessionId = identity.sessionId; quizId = identity.quizId; playerId = identity.playerId
+      // Check session status
+      const { data: sess } = await sb.from('sessions').select('status,quizzes(name,question_count)').eq('id', sessionId).single()
+      if (!sess) { localStorage.removeItem('quiz_identity'); buildColorPicker(); show('pin-screen'); return }
+      totalQs = sess.quizzes?.question_count || 0
+      if (sess.status === 'waiting') {
+        document.getElementById('wait-name').textContent = sess.quizzes?.name || 'Quiz'
+        document.getElementById('wait-nick').textContent = identity.nickname || ''
+        show('wait-screen'); subscribeToSession()
+      } else if (sess.status === 'active') {
+        document.body.classList.add('hunt-active')
+        await startHunt(true)
+      } else {
+        document.body.classList.add('hunt-active')
+        await startHunt(true)
+      }
+    }
 
-  const { data: player } = await sb.from('session_players').select('total_score').eq('id', playerId).single()
+    function show(id) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'))
+      document.getElementById(id).classList.remove('hidden')
+    }
+    window.show = show
 
-  answeredQuestions = answers || []
-  const score = player?.total_score || 0
-  const answered = answeredQuestions.length
+    // ── CHECK PIN ──
+    window.checkPin = async function () {
+      // Clear any previous hunt data
+      localStorage.removeItem('quiz_hunt_start')
+      const pin = document.getElementById('pin-inp').value.trim()
+      if (pin.length !== 6) return toast('PIN må vere 6 siffer')
+      const { data: s } = await sb.from('sessions').select('id,quiz_id,status,quizzes(name,question_count)').eq('join_code', pin).in('status', ['waiting', 'active']).single()
+      if (!s) return toast('Fann ingen aktiv quiz med den PIN-koden')
+      sessionId = s.id; quizId = s.quiz_id; totalQs = s.quizzes?.question_count || 0
+      document.getElementById('wait-name').textContent = s.quizzes?.name || 'Quiz'
+      show('nick-screen')
+      buildColorPicker()
+    }
 
-  // Update score display
-  const scoreEl = document.getElementById('hunt-score')
-  if (scoreEl) scoreEl.textContent = score
+    // ── JOIN ──
+    window.joinGame = async function () {
+      const nick = document.getElementById('nick-inp').value.trim()
+      if (!nick) return toast('Skriv inn eit kallenamn')
+      const { data: p, error } = await sb.from('session_players').insert({ session_id: sessionId, nickname: nick, avatar_color: chosenColor }).select().single()
+      if (error) return toast('Kunne ikkje bli med: ' + error.message)
+      playerId = p.id
+      // Save identity to localStorage so QR page can use it
+      localStorage.setItem('quiz_identity', JSON.stringify({ sessionId, quizId, playerId, nickname: nick }))
+      document.getElementById('wait-nick').textContent = nick
+      show('wait-screen')
+      subscribeToSession()
+    }
 
-  // Update progress
-  const pct = totalQs > 0 ? Math.round(answered / totalQs * 100) : 0
-  const pbar = document.getElementById('progress-bar')
-  const ptxt = document.getElementById('progress-text')
-  if (pbar) pbar.style.width = pct + '%'
-  if (ptxt) ptxt.textContent = `${answered} av ${totalQs} spørsmål`
+    // ── REALTIME: listen for game_start from teacher ──
+    function subscribeToSession() {
+      channel = sb.channel('session:' + sessionId)
+      channel.on('broadcast', { event: 'game_start' }, async () => {
+        await startHunt(false)
+      })
+      channel.on('broadcast', { event: 'game_over' }, () => {
+        endHunt()
+      })
+      // Listen for own answers being added (realtime update when returning from question page)
+      channel.on('postgres_changes', {
+        event: 'INSERT', schema: 'public', table: 'session_answers',
+        filter: `player_id=eq.${playerId}`
+      }, (payload) => {
+        refreshAnswers()
+      })
+      channel.subscribe()
+    }
 
-  // Render answered list
-  const list = document.getElementById('answered-list')
-  if (list) {
-    if (answeredQuestions.length === 0) {
-      list.innerHTML = '<p style="color:var(--muted);font-size:.85rem;text-align:center;padding:.5rem;">Ingen svar enno — finn ein QR-kode!</p>'
-    } else {
-      list.innerHTML = answeredQuestions.map(a => `
+    // Refresh answers when student returns from question.html (tab becomes visible again)
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && playerId) refreshAnswers()
+    })
+
+    // ── START HUNT ──
+    async function startHunt(alreadyStarted) {
+      if (!alreadyStarted) {
+        // First time starting — record start time
+        huntStartTime = Date.now()
+        localStorage.setItem('quiz_hunt_start', String(huntStartTime))
+        await sb.from('session_players').update({ hunt_started_at: new Date().toISOString() }).eq('id', playerId)
+      } else {
+        // Restoring after refresh — use saved start time from localStorage
+        const saved = localStorage.getItem('quiz_hunt_start')
+        if (saved) {
+          huntStartTime = parseInt(saved)
+        } else {
+          // Fallback: fetch from DB
+          const { data: pl } = await sb.from('session_players').select('hunt_started_at').eq('id', playerId).single()
+          huntStartTime = pl?.hunt_started_at ? new Date(pl.hunt_started_at).getTime() : Date.now()
+          localStorage.setItem('quiz_hunt_start', String(huntStartTime))
+        }
+      }
+      document.body.classList.add('hunt-active')
+      show('hunt-screen')
+      startHuntTimer()
+      await refreshAnswers()
+      // Subscribe if not already
+      if (!channel) subscribeToSession()
+    }
+
+    // ── TIMER ──
+    function startHuntTimer() {
+      clearInterval(timerInt)
+      timerInt = setInterval(() => {
+        const elapsed = Math.floor((Date.now() - huntStartTime) / 1000)
+        const m = String(Math.floor(elapsed / 60)).padStart(2, '0')
+        const s = String(elapsed % 60).padStart(2, '0')
+        const el = document.getElementById('hunt-timer')
+        if (el) el.textContent = `${m}:${s}`
+      }, 1000)
+    }
+
+    // ── REFRESH ANSWERS ──
+    async function refreshAnswers() {
+      const { data: answers } = await sb
+        .from('session_answers')
+        .select('question_id, selected_option, is_correct, points_earned, questions(question_text)')
+        .eq('player_id', playerId)
+        .eq('session_id', sessionId)
+
+      const { data: player } = await sb.from('session_players').select('total_score').eq('id', playerId).single()
+
+      answeredQuestions = answers || []
+      const score = player?.total_score || 0
+      const answered = answeredQuestions.length
+
+      // Update score display
+      const scoreEl = document.getElementById('hunt-score')
+      if (scoreEl) scoreEl.textContent = score
+
+      // Update progress
+      const pct = totalQs > 0 ? Math.round(answered / totalQs * 100) : 0
+      const pbar = document.getElementById('progress-bar')
+      const ptxt = document.getElementById('progress-text')
+      if (pbar) pbar.style.width = pct + '%'
+      if (ptxt) ptxt.textContent = `${answered} av ${totalQs} spørsmål`
+
+      // Render answered list
+      const list = document.getElementById('answered-list')
+      if (list) {
+        if (answeredQuestions.length === 0) {
+          list.innerHTML = '<p style="color:var(--muted);font-size:.85rem;text-align:center;padding:.5rem;">Ingen svar enno — finn ein QR-kode!</p>'
+        } else {
+          list.innerHTML = answeredQuestions.map(a => `
         <div class="ans-row ${a.is_correct ? 'correct' : 'wrong'}">
           <span class="ans-icon">${a.is_correct ? '✅' : '❌'}</span>
           <span class="ans-text">${esc(a.questions?.question_text || 'Spørsmål')}</span>
           <span class="ans-pts">${a.is_correct ? '+' + a.points_earned : '0'}</span>
         </div>`).join('')
+        }
+      }
+
+      // All done?
+      if (totalQs > 0 && answered >= totalQs) {
+        endHunt()
+      }
     }
-  }
 
-  // All done?
-  if (totalQs > 0 && answered >= totalQs) {
-    endHunt()
-  }
-}
+    // ── END HUNT ──
+    async function endHunt() {
+      clearInterval(timerInt)
+      const { data: player } = await sb.from('session_players').select('total_score, hunt_started_at, hunt_finished_at').eq('id', playerId).single()
+      if (player && !player.hunt_finished_at) {
+        await sb.from('session_players').update({ hunt_finished_at: new Date().toISOString() }).eq('id', playerId)
+      }
+      const elapsed = huntStartTime ? Math.floor((Date.now() - huntStartTime) / 1000) : 0
+      const m = Math.floor(elapsed / 60), s = elapsed % 60
+      show('done-screen')
+      document.getElementById('done-score').textContent = player?.total_score || 0
+      document.getElementById('done-time').textContent = `Tid brukt: ${m}m ${s}s`
+    }
 
-// ── END HUNT ──
-async function endHunt() {
-  clearInterval(timerInt)
-  const { data: player } = await sb.from('session_players').select('total_score, hunt_started_at, hunt_finished_at').eq('id', playerId).single()
-  if (player && !player.hunt_finished_at) {
-    await sb.from('session_players').update({ hunt_finished_at: new Date().toISOString() }).eq('id', playerId)
-  }
-  const elapsed = huntStartTime ? Math.floor((Date.now() - huntStartTime) / 1000) : 0
-  const m = Math.floor(elapsed / 60), s = elapsed % 60
-  show('done-screen')
-  document.getElementById('done-score').textContent = player?.total_score || 0
-  document.getElementById('done-time').textContent = `Tid brukt: ${m}m ${s}s`
-}
+    function esc(str) {
+      return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    }
+    function toast(msg) {
+      const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg
+      document.body.appendChild(t); setTimeout(() => t.remove(), 3000)
+    }
 
-function esc(str) {
-  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-}
-function toast(msg) {
-  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg
-  document.body.appendChild(t); setTimeout(() => t.remove(), 3000)
-}
-
-// ── LEAVE QUIZ ──
-window.leaveQuiz = function() {
-  if (!confirm('Er du sikker på at du vil forlate quizen? Framgangen din vert lagra.')) return
-  clearInterval(timerInt)
-  if (channel) channel.unsubscribe()
-  localStorage.removeItem('quiz_identity')
-  localStorage.removeItem('quiz_hunt_start')
-  // Reset state
-  sessionId = null; quizId = null; playerId = null; huntStartTime = null
-  document.body.classList.remove('hunt-active')
-  show('pin-screen')
-}
-</script>
+    // ── LEAVE QUIZ ──
+    window.leaveQuiz = function () {
+      if (!confirm('Er du sikker på at du vil forlate quizen? Framgangen din vert lagra.')) return
+      clearInterval(timerInt)
+      if (channel) channel.unsubscribe()
+      localStorage.removeItem('quiz_identity')
+      localStorage.removeItem('quiz_hunt_start')
+      // Reset state
+      sessionId = null; quizId = null; playerId = null; huntStartTime = null
+      document.body.classList.remove('hunt-active')
+      show('pin-screen')
+    }
+  </script>
 </body>
+
 </html>
