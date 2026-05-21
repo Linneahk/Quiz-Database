@@ -654,6 +654,7 @@
       <p style="color:var(--muted);margin-top:.25rem;font-size:.9rem;">poeng totalt</p>
       <div class="done-time" id="done-time"></div>
       <p style="color:var(--muted);font-size:.85rem;margin-top:1rem;">Gå tilbake til læraren for å sjå resultata!</p>
+      <button class="btn" style="margin-top:1.25rem;max-width:280px;" onclick="newQuiz()">Spel ny quiz</button>
     </div>
   </div>
 
@@ -859,12 +860,17 @@
     // ── END HUNT ──
     async function endHunt() {
       clearInterval(timerInt)
+      if (channel) channel.unsubscribe()
       const { data: player } = await sb.from('session_players').select('total_score, hunt_started_at, hunt_finished_at').eq('id', playerId).single()
       if (player && !player.hunt_finished_at) {
         await sb.from('session_players').update({ hunt_finished_at: new Date().toISOString() }).eq('id', playerId)
       }
       const elapsed = huntStartTime ? Math.floor((Date.now() - huntStartTime) / 1000) : 0
       const m = Math.floor(elapsed / 60), s = elapsed % 60
+      // Clear localStorage so refresh doesn't send back into hunt
+      localStorage.removeItem('quiz_identity')
+      localStorage.removeItem('quiz_hunt_start')
+      document.body.classList.remove('hunt-active')
       show('done-screen')
       document.getElementById('done-score').textContent = player?.total_score || 0
       document.getElementById('done-time').textContent = `Tid brukt: ${m}m ${s}s`
@@ -876,6 +882,13 @@
     function toast(msg) {
       const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg
       document.body.appendChild(t); setTimeout(() => t.remove(), 3000)
+    }
+
+    // ── NEW QUIZ (from done screen) ──
+    window.newQuiz = function () {
+      sessionId = null; quizId = null; playerId = null; huntStartTime = null
+      document.body.classList.remove('hunt-active')
+      show('pin-screen')
     }
 
     // ── LEAVE QUIZ ──
