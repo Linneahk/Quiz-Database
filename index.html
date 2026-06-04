@@ -595,7 +595,7 @@
     </div>
     <div class="crow" id="crow"></div>
     <button class="btn" onclick="joinGame()">Bli med! 🎮</button>
-    <button class="btn ghost" onclick="show('pin-screen')">← Tilbake</button>
+    <button class="btn ghost" onclick="goBackToPin()">← Tilbake</button>
   </div>
 
   <!-- WAITING FOR TEACHER -->
@@ -660,6 +660,34 @@
 
   <a href="login.html" class="tlink">Lærar? Logg inn →</a>
 
+  <!-- LEAVE CONFIRM MODAL -->
+  <div id="leave-modal" style="
+    display:none;position:fixed;inset:0;z-index:9999;
+    background:rgba(0,0,0,.7);
+    align-items:center;justify-content:center;padding:1.5rem;
+  ">
+    <div style="
+      background:#1a1a24;border:1px solid #2a2a3a;border-radius:20px;
+      padding:1.75rem 1.5rem;max-width:340px;width:100%;text-align:center;
+    ">
+      <div style="font-size:2rem;margin-bottom:.75rem">🚪</div>
+      <div style="font-family:'Fraunces',serif;font-weight:900;font-size:1.2rem;margin-bottom:.5rem;color:#f0f0f5">Vil du forlate?</div>
+      <div style="font-size:.875rem;color:#7a7a9a;margin-bottom:1.5rem;line-height:1.5">Du vil bli fjerna frå lobby-lista. Framgangen vert lagra viss jakta er i gang.</div>
+      <div style="display:flex;gap:.75rem;">
+        <button onclick="closeLeaveModal()" style="
+          flex:1;padding:.85rem;border:1px solid #2a2a3a;border-radius:12px;
+          background:transparent;color:#7a7a9a;font-family:'Epilogue',sans-serif;
+          font-size:.95rem;font-weight:600;cursor:pointer;
+        ">Avbryt</button>
+        <button onclick="confirmLeave()" style="
+          flex:1;padding:.85rem;border:none;border-radius:12px;
+          background:#ff4d6d;color:#fff;font-family:'Fraunces',serif;
+          font-size:.95rem;font-weight:700;cursor:pointer;
+        ">Forlat</button>
+      </div>
+    </div>
+  </div>
+
   <script type="module">
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm'
     const SUPABASE_URL = 'https://owgldsfxpmzpkipgeksr.supabase.co'
@@ -697,10 +725,15 @@
 
     async function restoreSession(identity) {
       sessionId = identity.sessionId; quizId = identity.quizId; playerId = identity.playerId
+      if (identity.totalQs) totalQs = identity.totalQs  // restore from localStorage
       // Check session status
       const { data: sess } = await sb.from('sessions').select('status,quizzes(name,question_count)').eq('id', sessionId).single()
       if (!sess) { localStorage.removeItem('quiz_identity'); buildColorPicker(); show('pin-screen'); return }
-      totalQs = sess.quizzes?.question_count || 0
+      // Use question_count as initial value, then verify with actual questions table
+      totalQs = sess.quizzes?.question_count || identity.totalQs || 0
+      // Fetch actual count from questions table (source of truth)
+      const { data: actualQs } = await sb.from('questions').select('id').eq('major_id', identity.quizId)
+      if (actualQs?.length) totalQs = actualQs.length
       if (sess.status === 'waiting') {
         document.getElementById('wait-name').textContent = sess.quizzes?.name || 'Quiz'
         document.getElementById('wait-nick').textContent = identity.nickname || ''
@@ -709,8 +742,11 @@
         document.body.classList.add('hunt-active')
         await startHunt(true)
       } else {
-        document.body.classList.add('hunt-active')
-        await startHunt(true)
+        // Session is finished — clear identity and go back to PIN screen
+        localStorage.removeItem('quiz_identity')
+        localStorage.removeItem('quiz_hunt_start')
+        buildColorPicker()
+        show('pin-screen')
       }
     }
 
@@ -728,7 +764,11 @@
       if (pin.length !== 6) return toast('PIN må vere 6 siffer')
       const { data: s } = await sb.from('sessions').select('id,quiz_id,status,quizzes(name,question_count)').eq('join_code', pin).in('status', ['waiting', 'active']).single()
       if (!s) return toast('Fann ingen aktiv quiz med den PIN-koden')
-      sessionId = s.id; quizId = s.quiz_id; totalQs = s.quizzes?.question_count || 0
+      sessionId = s.id; quizId = s.quiz_id
+      totalQs = s.quizzes?.question_count || 0
+      // Verify with actual questions table
+      const { data: realQs } = await sb.from('questions').select('id').eq('major_id', s.quiz_id)
+      if (realQs?.length) totalQs = realQs.length
       document.getElementById('wait-name').textContent = s.quizzes?.name || 'Quiz'
       show('nick-screen')
       buildColorPicker()
@@ -742,7 +782,7 @@
       if (error) return toast('Kunne ikkje bli med: ' + error.message)
       playerId = p.id
       // Save identity to localStorage so QR page can use it
-      localStorage.setItem('quiz_identity', JSON.stringify({ sessionId, quizId, playerId, nickname: nick }))
+      localStorage.setItem('quiz_identity', JSON.stringify({ sessionId, quizId, playerId, nickname: nick, totalQs }))
       document.getElementById('wait-nick').textContent = nick
       show('wait-screen')
       subscribeToSession()
@@ -755,7 +795,7 @@
         await startHunt(false)
       })
       channel.on('broadcast', { event: 'game_over' }, () => {
-        endHunt()
+        kickToPin()
       })
       // Listen for own answers being added (realtime update when returning from question page)
       channel.on('postgres_changes', {
@@ -891,17 +931,62 @@
       show('pin-screen')
     }
 
-    // ── LEAVE QUIZ ──
-    window.leaveQuiz = function () {
-      if (!confirm('Er du sikker på at du vil forlate quizen? Framgangen din vert lagra.')) return
+    // ── KICKED BY TEACHER ──
+    function kickToPin() {
       clearInterval(timerInt)
       if (channel) channel.unsubscribe()
       localStorage.removeItem('quiz_identity')
       localStorage.removeItem('quiz_hunt_start')
-      // Reset state
+      sessionId = null; quizId = null; playerId = null; huntStartTime = null
+      document.body.classList.remove('hunt-active')
+      // Show a brief message before going to pin screen
+      const t = document.createElement('div')
+      t.className = 'toast'
+      t.textContent = '⏹️ Læraren avslutta quizen'
+      document.body.appendChild(t)
+      setTimeout(() => {
+        t.remove()
+        buildColorPicker()
+        show('pin-screen')
+      }, 2500)
+    }
+
+    // ── GO BACK TO PIN (from nickname screen) ──
+    window.goBackToPin = async function () {
+      if (playerId) {
+        await sb.from('session_players').delete().eq('id', playerId)
+        if (channel) channel.send({ type: 'broadcast', event: 'player_left', payload: {} })
+        playerId = null
+        localStorage.removeItem('quiz_identity')
+      }
+      show('pin-screen')
+    }
+
+    // ── LEAVE QUIZ ──
+    window.leaveQuiz = function () {
+      // Show custom modal — no confirm() which breaks on mobile
+      document.getElementById('leave-modal').style.display = 'flex'
+    }
+
+    window.closeLeaveModal = function () {
+      document.getElementById('leave-modal').style.display = 'none'
+    }
+
+    window.confirmLeave = async function () {
+      document.getElementById('leave-modal').style.display = 'none'
+      const pid = playerId
+      // Reset state immediately
+      clearInterval(timerInt)
+      localStorage.removeItem('quiz_identity')
+      localStorage.removeItem('quiz_hunt_start')
       sessionId = null; quizId = null; playerId = null; huntStartTime = null
       document.body.classList.remove('hunt-active')
       show('pin-screen')
+      // Delete from DB
+      if (pid) {
+        await sb.from('session_players').delete().eq('id', pid)
+      }
+      if (channel) { channel.unsubscribe(); channel = null }
     }
   </script>
 </body>

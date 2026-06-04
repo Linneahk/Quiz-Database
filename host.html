@@ -664,12 +664,26 @@
       document.getElementById('pin-url').textContent = base
       document.getElementById('join-strong').textContent = base
       renderLobbyPlayers()
+      // Poll player list every 3s as reliable fallback for join/leave
+      if (window._lobbyPoll) clearInterval(window._lobbyPoll)
+      window._lobbyPoll = setInterval(async () => {
+        const { data: fresh } = await sb.from('session_players').select('*').eq('session_id', sessionId)
+        if (fresh) { players = fresh; renderLobbyPlayers() }
+      }, 3000)
     }
 
     function setupRealtime() {
       channel = sb.channel('session:' + sessionId)
       channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'session_players', filter: `session_id=eq.${sessionId}` }, (p) => {
         players.push(p.new); renderLobbyPlayers()
+      })
+      channel.on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'session_players', filter: `session_id=eq.${sessionId}` }, async () => {
+        const { data: fresh } = await sb.from('session_players').select('*').eq('session_id', sessionId)
+        players = fresh || []; renderLobbyPlayers()
+      })
+      channel.on('broadcast', { event: 'player_left' }, async () => {
+        const { data: fresh } = await sb.from('session_players').select('*').eq('session_id', sessionId)
+        players = fresh || []; renderLobbyPlayers()
       })
       channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'session_answers', filter: `session_id=eq.${sessionId}` }, () => {
         refreshLeaderboard()
@@ -709,6 +723,7 @@
       }
       await channel.send({ type: 'broadcast', event: 'game_start', payload: { session_id: sessionId } })
 
+      if (window._lobbyPoll) { clearInterval(window._lobbyPoll); window._lobbyPoll = null }
       document.getElementById('lobby').style.display = 'none'
       const huntEl = document.getElementById('hunt'); huntEl.style.display = 'flex'
       document.getElementById('hunt-qname').textContent = quizName
@@ -792,11 +807,18 @@
     }
 
     async function showFinal() {
-      const { data: answerCounts } = await sb.from('session_answers').select('player_id').eq('session_id', sessionId)
-      const countMap = {}
-        ; (answerCounts || []).forEach(a => { countMap[a.player_id] = (countMap[a.player_id] || 0) + 1 })
+      // Always fetch fresh scores from DB — local players array may be stale
+      const [{ data: freshPlayers }, { data: answerCounts }] = await Promise.all([
+        sb.from('session_players')
+          .select('id, nickname, avatar_color, total_score, hunt_finished_at')
+          .eq('session_id', sessionId),
+        sb.from('session_answers').select('player_id').eq('session_id', sessionId)
+      ])
 
-      const sorted = [...players].sort((a, b) => {
+      const countMap = {}
+      ;(answerCounts || []).forEach(a => { countMap[a.player_id] = (countMap[a.player_id] || 0) + 1 })
+
+      const sorted = (freshPlayers || []).sort((a, b) => {
         if (b.total_score !== a.total_score) return b.total_score - a.total_score
         if (a.hunt_finished_at && b.hunt_finished_at) return new Date(a.hunt_finished_at) - new Date(b.hunt_finished_at)
         if (a.hunt_finished_at) return -1
