@@ -58,7 +58,10 @@ function renderQuestion(q, existing) {
     const btn = document.createElement('button')
     btn.className = 'opt-btn'
     if (answered) {
-      if (opt === q.answer)                      btn.classList.add('correct')
+      let correctOpts = []
+      try { const p = JSON.parse(q.answer); correctOpts = Array.isArray(p) ? p : [q.answer] }
+      catch { correctOpts = [q.answer] }
+      if (correctOpts.includes(opt))             btn.classList.add('correct')
       else if (opt === existing.selected_option) btn.classList.add('wrong')
       btn.disabled = true
     }
@@ -80,13 +83,21 @@ async function submitAnswer(chosenIdx, options, q) {
   document.querySelectorAll('.opt-btn').forEach(b => b.disabled = true)
 
   const chosenText = options[chosenIdx]
-  const isCorrect  = chosenText === q.answer
-  const pts        = isCorrect ? 1 : 0
+  // Handle both single answer (string) and multi-answer (JSON array)
+  let correctAnswers = []
+  try {
+    const parsed = JSON.parse(q.answer)
+    correctAnswers = Array.isArray(parsed) ? parsed : [q.answer]
+  } catch {
+    correctAnswers = [q.answer]
+  }
+  const isCorrect = correctAnswers.includes(chosenText)
+  const pts = isCorrect ? 1 : 0
 
   // Highlight
   document.querySelectorAll('.opt-btn').forEach((btn, i) => {
-    if (options[i] === q.answer) btn.classList.add('correct')
-    else if (i === chosenIdx)    btn.classList.add('wrong')
+    if (correctAnswers.includes(options[i])) btn.classList.add('correct')
+    else if (i === chosenIdx)                btn.classList.add('wrong')
   })
 
   try {
@@ -100,12 +111,15 @@ async function submitAnswer(chosenIdx, options, q) {
       response_time_ms: null
     })
 
+    // Always fetch latest score to keep display accurate
+    const { data: playerAfter } = await db.from('session_players')
+      .select('total_score').eq('id', identity.playerId).single()
     if (isCorrect) {
-      const { data: player } = await db.from('session_players')
-        .select('total_score').eq('id', identity.playerId).single()
-      const newScore = (player?.total_score || 0) + pts
+      const newScore = (playerAfter?.total_score || 0) + pts
       await db.from('session_players').update({ total_score: newScore }).eq('id', identity.playerId)
       updateHeader(newScore, null)
+    } else {
+      updateHeader(playerAfter?.total_score || 0, null)
     }
 
     // Check if all questions answered

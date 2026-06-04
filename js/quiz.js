@@ -305,7 +305,7 @@ async function saveQuestion(lid) {
     saved = data
 
     await db.from('quizzes').update({
-      question_count: questions.filter(x => x.id || x._localId === lid).length
+      question_count: questions.filter(x => x.id).length + 1  // +1 for the one being saved now
     }).eq('id', quizId)
   }
 
