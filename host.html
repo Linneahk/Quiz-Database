@@ -551,6 +551,7 @@
       <div class="hunt-meta">
         <span class="hunt-qcount" id="hunt-qcount"></span>
         <span class="hunt-timer" id="hunt-timer">00:00</span>
+        <button id="btn-pause" class="btn-end-hunt" onclick="togglePause()" style="background:var(--surface);border:1px solid var(--border);">⏸ Pause</button>
         <button class="btn-end-hunt" onclick="endHunt()">Avslutt jakt</button>
       </div>
     </div>
@@ -580,6 +581,7 @@
     const quizId = new URLSearchParams(location.search).get('quiz')
     let sessionId = null, players = [], totalQs = 0, channel = null
     let huntStartTime = null, timerInt = null, quizName = ''
+    let isPaused = false, pausedAt = null, totalPausedMs = 0
 
     async function init() {
       if (!quizId) { toast('Ingen quiz vald'); return }
@@ -618,11 +620,15 @@
         setupRealtime()
         if (existingSess.status === 'active') {
           huntStartTime = existingSess.started_at ? new Date(existingSess.started_at).getTime() : Date.now()
+          isPaused = existingSess.is_paused || false
+          totalPausedMs = existingSess.total_paused_ms || 0
+          pausedAt = existingSess.paused_at ? new Date(existingSess.paused_at).getTime() : null
           document.getElementById('lobby').style.display = 'none'
           const huntEl = document.getElementById('hunt'); huntEl.style.display = 'flex'
           document.getElementById('hunt-qname').textContent = quizName
           document.getElementById('hunt-qcount').textContent = `${totalQs} spørsmål`
-          startTimer()
+          updatePauseBtn()
+          if (!isPaused) startTimer()
           await refreshLeaderboard()
         }
         return
@@ -704,8 +710,9 @@
       if (totalQs === 0) return toast('Quizen har ingen spørsmål!')
 
       huntStartTime = Date.now()
+      isPaused = false; pausedAt = null; totalPausedMs = 0
       const { error: startErr } = await sb.from('sessions')
-        .update({ status: 'active', started_at: new Date().toISOString() })
+        .update({ status: 'active', started_at: new Date().toISOString(), is_paused: false, total_paused_ms: 0 })
         .eq('id', sessionId)
       if (startErr) {
         console.error('Could not start session:', startErr)
@@ -720,6 +727,7 @@
       document.getElementById('hunt-qname').textContent = quizName
       document.getElementById('hunt-qcount').textContent = `${totalQs} spørsmål`
 
+      updatePauseBtn()
       startTimer()
       await refreshLeaderboard()
     }
@@ -727,12 +735,52 @@
     function startTimer() {
       clearInterval(timerInt)
       timerInt = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - huntStartTime) / 1000)
+        const elapsed = Math.floor((Date.now() - huntStartTime - totalPausedMs) / 1000)
         const m = String(Math.floor(elapsed / 60)).padStart(2, '0')
         const s = String(elapsed % 60).padStart(2, '0')
         const el = document.getElementById('hunt-timer')
         if (el) el.textContent = `${m}:${s}`
       }, 1000)
+    }
+
+    function updatePauseBtn() {
+      const btn = document.getElementById('btn-pause')
+      if (!btn) return
+      if (isPaused) {
+        btn.textContent = '▶ Fortsett'
+        btn.style.background = 'var(--green)'
+        btn.style.color = '#0f0f13'
+        document.getElementById('hunt-timer').style.opacity = '0.5'
+      } else {
+        btn.textContent = '⏸ Pause'
+        btn.style.background = ''
+        btn.style.color = ''
+        document.getElementById('hunt-timer').style.opacity = '1'
+      }
+    }
+
+    window.togglePause = async function () {
+      if (!isPaused) {
+        // PAUSE
+        clearInterval(timerInt)
+        isPaused = true
+        pausedAt = Date.now()
+        updatePauseBtn()
+        await sb.from('sessions').update({ is_paused: true, paused_at: new Date(pausedAt).toISOString() }).eq('id', sessionId)
+        await channel.send({ type: 'broadcast', event: 'timer_pause', payload: {} })
+        toast('⏸ Tidtakar pause')
+      } else {
+        // RESUME
+        const pausedDuration = Date.now() - pausedAt
+        totalPausedMs += pausedDuration
+        isPaused = false
+        pausedAt = null
+        updatePauseBtn()
+        await sb.from('sessions').update({ is_paused: false, paused_at: null, total_paused_ms: totalPausedMs }).eq('id', sessionId)
+        await channel.send({ type: 'broadcast', event: 'timer_resume', payload: { total_paused_ms: totalPausedMs } })
+        startTimer()
+        toast('▶ Tidtakar starta')
+      }
     }
 
     async function refreshLeaderboard() {

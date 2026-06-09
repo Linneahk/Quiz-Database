@@ -703,6 +703,7 @@
     let sessionId = null, quizId = null, playerId = null, totalQs = 0
     let huntStartTime = null, timerInt = null, channel = null
     let answeredQuestions = [] // local cache of answered questions
+    let totalPausedMs = 0, isPaused = false
 
     // Restore identity if already joined (page refresh)
     // Restore hunt timer from localStorage if page was refreshed mid-hunt
@@ -806,6 +807,19 @@
       channel.on('broadcast', { event: 'game_over' }, () => {
         kickToPin()
       })
+      channel.on('broadcast', { event: 'timer_pause' }, () => {
+        clearInterval(timerInt)
+        isPaused = true
+        const el = document.getElementById('hunt-timer')
+        if (el) { el.textContent = el.textContent.replace(' ⏸', '') + ' ⏸'; el.style.opacity = '0.5' }
+      })
+      channel.on('broadcast', { event: 'timer_resume' }, (e) => {
+        totalPausedMs = e.payload?.total_paused_ms ?? totalPausedMs
+        isPaused = false
+        const el = document.getElementById('hunt-timer')
+        if (el) { el.style.opacity = '1' }
+        startHuntTimer()
+      })
       // Listen for own answers being added (realtime update when returning from question page)
       channel.on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'session_answers',
@@ -826,6 +840,7 @@
       if (!alreadyStarted) {
         // First time starting — record start time
         huntStartTime = Date.now()
+        totalPausedMs = 0; isPaused = false
         localStorage.setItem('quiz_hunt_start', String(huntStartTime))
         await sb.from('session_players').update({ hunt_started_at: new Date().toISOString() }).eq('id', playerId)
       } else {
@@ -834,10 +849,26 @@
         if (saved) {
           huntStartTime = parseInt(saved)
         } else {
-          // Fallback: fetch from DB
           const { data: pl } = await sb.from('session_players').select('hunt_started_at').eq('id', playerId).single()
           huntStartTime = pl?.hunt_started_at ? new Date(pl.hunt_started_at).getTime() : Date.now()
           localStorage.setItem('quiz_hunt_start', String(huntStartTime))
+        }
+        // Fetch pause state from session
+        const { data: sess } = await sb.from('sessions').select('is_paused, paused_at, total_paused_ms').eq('id', sessionId).single()
+        isPaused = sess?.is_paused || false
+        totalPausedMs = sess?.total_paused_ms || 0
+        if (isPaused && sess?.paused_at) {
+          // Freeze timer at the moment it was paused
+          const frozenElapsed = Math.floor((new Date(sess.paused_at).getTime() - huntStartTime - totalPausedMs) / 1000)
+          const m = String(Math.floor(frozenElapsed / 60)).padStart(2, '0')
+          const s = String(frozenElapsed % 60).padStart(2, '0')
+          document.body.classList.add('hunt-active')
+          show('hunt-screen')
+          const el = document.getElementById('hunt-timer')
+          if (el) { el.textContent = `${m}:${s} ⏸`; el.style.opacity = '0.5' }
+          await refreshAnswers()
+          if (!channel) subscribeToSession()
+          return
         }
       }
       document.body.classList.add('hunt-active')
@@ -851,8 +882,10 @@
     // ── TIMER ──
     function startHuntTimer() {
       clearInterval(timerInt)
+      const el = document.getElementById('hunt-timer')
+      if (el) el.style.opacity = '1'
       timerInt = setInterval(() => {
-        const elapsed = Math.floor((Date.now() - huntStartTime) / 1000)
+        const elapsed = Math.floor((Date.now() - huntStartTime - totalPausedMs) / 1000)
         const m = String(Math.floor(elapsed / 60)).padStart(2, '0')
         const s = String(elapsed % 60).padStart(2, '0')
         const el = document.getElementById('hunt-timer')
