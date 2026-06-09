@@ -714,6 +714,7 @@
 
     function buildColorPicker() {
       const row = document.getElementById('crow')
+      row.innerHTML = ''
       COLORS.forEach((c, i) => {
         const d = document.createElement('div')
         d.className = 'cdot' + (i === 0 ? ' on' : '')
@@ -758,7 +759,6 @@
 
     // ── CHECK PIN ──
     window.checkPin = async function () {
-      // Clear any previous hunt data
       localStorage.removeItem('quiz_hunt_start')
       const pin = document.getElementById('pin-inp').value.trim()
       if (pin.length !== 6) return toast('PIN må vere 6 siffer')
@@ -766,7 +766,6 @@
       if (!s) return toast('Fann ingen aktiv quiz med den PIN-koden')
       sessionId = s.id; quizId = s.quiz_id
       totalQs = s.quizzes?.question_count || 0
-      // Verify with actual questions table
       const { data: realQs } = await sb.from('questions').select('id').eq('major_id', s.quiz_id)
       if (realQs?.length) totalQs = realQs.length
       document.getElementById('wait-name').textContent = s.quizzes?.name || 'Quiz'
@@ -781,11 +780,17 @@
       const { data: p, error } = await sb.from('session_players').insert({ session_id: sessionId, nickname: nick, avatar_color: chosenColor }).select().single()
       if (error) return toast('Kunne ikkje bli med: ' + error.message)
       playerId = p.id
-      // Save identity to localStorage so QR page can use it
       localStorage.setItem('quiz_identity', JSON.stringify({ sessionId, quizId, playerId, nickname: nick, totalQs }))
       document.getElementById('wait-nick').textContent = nick
-      show('wait-screen')
-      subscribeToSession()
+      // Sjekk om jakta allereie er i gang
+      const { data: sess } = await sb.from('sessions').select('status').eq('id', sessionId).single()
+      if (sess?.status === 'active') {
+        document.body.classList.add('hunt-active')
+        await startHunt(false)
+      } else {
+        show('wait-screen')
+        subscribeToSession()
+      }
     }
 
     // ── REALTIME: listen for game_start from teacher ──
@@ -975,6 +980,8 @@
     window.confirmLeave = async function () {
       document.getElementById('leave-modal').style.display = 'none'
       const pid = playerId
+      const sid = sessionId
+      const savedIdentity = JSON.parse(localStorage.getItem('quiz_identity') || 'null')
       // Reset state immediately
       clearInterval(timerInt)
       localStorage.removeItem('quiz_identity')
@@ -982,9 +989,14 @@
       sessionId = null; quizId = null; playerId = null; huntStartTime = null
       document.body.classList.remove('hunt-active')
       show('pin-screen')
-      // Delete from DB
       if (pid) {
-        await sb.from('session_players').delete().eq('id', pid)
+        // Lagre info for ev. rejoin
+        localStorage.setItem('quiz_left_' + sid, JSON.stringify({
+          playerId: pid,
+          nickname: savedIdentity?.nickname || ''
+        }))
+        // Marker som inaktiv i DB (forsvinn frå lobby og leaderboard)
+        await sb.from('session_players').update({ is_active: false }).eq('id', pid)
       }
       if (channel) { channel.unsubscribe(); channel = null }
     }

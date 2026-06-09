@@ -70,12 +70,24 @@ async function init() {
     .order('order', { ascending: true })
 
   if (qs && qs.length > 0) {
-    questions = qs.map(q => ({
-      ...q,
-      options: Array.isArray(q.options) ? q.options : JSON.parse(q.options || '[]'),
-      _localId: ++localIdCounter,
-      _saved: true
-    }))
+    questions = qs.map(q => {
+      let answers = []
+      if (q.answer) {
+        try {
+          const parsed = JSON.parse(q.answer)
+          answers = Array.isArray(parsed) ? parsed : [q.answer]
+        } catch {
+          answers = [q.answer]
+        }
+      }
+      return {
+        ...q,
+        options: Array.isArray(q.options) ? q.options : JSON.parse(q.options || '[]'),
+        answers,
+        _localId: ++localIdCounter,
+        _saved: true
+      }
+    })
     renderList()
   }
 }

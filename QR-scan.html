@@ -254,6 +254,7 @@
         qrbox: { width: Math.min(240, window.innerWidth - 80), height: Math.min(240, window.innerWidth - 80) },
         rememberLastUsedCamera: true,
         showTorchButtonIfSupported: true,
+        videoConstraints: { facingMode: { ideal: 'environment' } }
       })
       scanner.render(onScanSuccess, () => {})
     }
@@ -263,6 +264,7 @@
       if (scanDone) return
       scanDone = true
       if (scanner) scanner.clear().catch(() => {})
+
       showStatus('<span class="spin-sm"></span> Les QR-kode…', 'info')
 
       let questionId = null
@@ -316,6 +318,8 @@
       scanDone = false
       clearStatus()
       document.getElementById('resultCard').classList.remove('visible')
+      if (scanner) scanner.clear().catch(() => {})
+      scanner = null
       document.getElementById('qr-reader').innerHTML = ''
       initScanner()
     }

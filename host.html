@@ -610,19 +610,6 @@
           existingSess = data
         }
       }
-      // Final fallback: search DB
-      if (!existingSess) {
-        const { data } = await sb.from('sessions')
-          .select('*')
-          .eq('quiz_id', quizId)
-          .eq('host_id', user.id)
-          .in('status', ['waiting', 'active'])
-          .order('started_at', { ascending: false, nullsFirst: true })
-          .limit(1)
-          .maybeSingle()
-        existingSess = data
-      }
-
       if (existingSess) {
         sessionId = existingSess.id
         const { data: ep } = await sb.from('session_players').select('*').eq('session_id', sessionId)
@@ -667,7 +654,7 @@
       // Poll player list every 3s as reliable fallback for join/leave
       if (window._lobbyPoll) clearInterval(window._lobbyPoll)
       window._lobbyPoll = setInterval(async () => {
-        const { data: fresh } = await sb.from('session_players').select('*').eq('session_id', sessionId)
+        const { data: fresh } = await sb.from('session_players').select('*').eq('session_id', sessionId).eq('is_active', true)
         if (fresh) { players = fresh; renderLobbyPlayers() }
       }, 3000)
     }
@@ -678,12 +665,16 @@
         players.push(p.new); renderLobbyPlayers()
       })
       channel.on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'session_players', filter: `session_id=eq.${sessionId}` }, async () => {
-        const { data: fresh } = await sb.from('session_players').select('*').eq('session_id', sessionId)
-        players = fresh || []; renderLobbyPlayers()
+        const { data: fresh } = await sb.from('session_players').select('*').eq('session_id', sessionId).eq('is_active', true)
+        players = fresh || []
+        renderLobbyPlayers()
+        refreshLeaderboard()
       })
       channel.on('broadcast', { event: 'player_left' }, async () => {
-        const { data: fresh } = await sb.from('session_players').select('*').eq('session_id', sessionId)
-        players = fresh || []; renderLobbyPlayers()
+        const { data: fresh } = await sb.from('session_players').select('*').eq('session_id', sessionId).eq('is_active', true)
+        players = fresh || []
+        renderLobbyPlayers()
+        refreshLeaderboard()
       })
       channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'session_answers', filter: `session_id=eq.${sessionId}` }, () => {
         refreshLeaderboard()
@@ -750,6 +741,7 @@
         .from('session_players')
         .select('id, nickname, avatar_color, total_score, hunt_finished_at')
         .eq('session_id', sessionId)
+        .eq('is_active', true)
 
       // Fetch answer counts per player
       const { data: answerCounts } = await sb
