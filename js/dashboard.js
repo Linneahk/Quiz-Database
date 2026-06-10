@@ -224,6 +224,19 @@ function renderQuizzes(list) {
     })
 
     const nameEsc = escAttr(q.name)
+    const now = new Date()
+    const schedStart = q.scheduled_start ? new Date(q.scheduled_start) : null
+    const schedEnd   = q.scheduled_end   ? new Date(q.scheduled_end)   : null
+    const isScheduled = schedStart && !isActive
+    const isOverdue   = isScheduled && schedStart < now  // scheduled time has passed but not started
+    let scheduleBadge = ''
+    if (isScheduled) {
+      const label = isOverdue
+        ? `⏰ Planlagt ${formatScheduleDate(q.scheduled_start)}`
+        : `📅 ${formatScheduleDate(q.scheduled_start)}`
+      const badgeColor = isOverdue ? '#f0c050' : '#4d9fff'
+      scheduleBadge = `<span style="font-size:.72rem;padding:.15rem .5rem;border-radius:6px;background:${badgeColor}22;color:${badgeColor};border:1px solid ${badgeColor}66;white-space:nowrap;">${label}</span>`
+    }
 
     card.innerHTML = `
       <div class="quiz-color-stripe"></div>
@@ -248,6 +261,7 @@ function renderQuizzes(list) {
           <span class="quiz-name">${escHtml(q.name)}</span>
           <div class="quiz-meta">
             ${isActive ? '<span><span class="quiz-active-dot"></span>Aktiv</span>' : `<span>Oppretta ${date}</span>`}
+            ${scheduleBadge}
             ${tag ? `<span class="quiz-tag">${escHtml(tag)}</span>` : ''}
           </div>
         </div>
@@ -574,6 +588,16 @@ function closeModal() {
   cancelNewTag()
   const sel = document.getElementById('newTagSelect')
   if (sel) sel.value = ''
+  const tog = document.getElementById('scheduleToggle')
+  if (tog) tog.checked = false
+  toggleScheduleFields(false)
+  const ss = document.getElementById('scheduleStart'); if (ss) ss.value = ''
+  const se = document.getElementById('scheduleEnd');   if (se) se.value = ''
+}
+
+window.toggleScheduleFields = function(show) {
+  const el = document.getElementById('scheduleFields')
+  if (el) el.style.display = show ? 'block' : 'none'
 }
 function closeModalIfBg(e) {
   if (e.target === document.getElementById('modalOverlay')) closeModal()
@@ -674,14 +698,21 @@ async function createQuiz() {
   btn.disabled = true
   btn.textContent = 'Oppretter…'
 
+  const ssEl = document.getElementById('scheduleStart')
+  const seEl = document.getElementById('scheduleEnd')
+  const scheduledStart = ssEl?.value ? new Date(ssEl.value).toISOString() : null
+  const scheduledEnd   = seEl?.value ? new Date(seEl.value).toISOString() : null
+
   const newQuiz = {
     name,
-    color:          selectedColor.bg,
-    teacher_id:     currentUser.id,
-    status:         'draft',
-    created_at:     new Date().toISOString(),
-    question_count: 0,
-    session_count:  0
+    color:            selectedColor.bg,
+    teacher_id:       currentUser.id,
+    status:           'draft',
+    created_at:       new Date().toISOString(),
+    question_count:   0,
+    session_count:    0,
+    scheduled_start:  scheduledStart,
+    scheduled_end:    scheduledEnd
   }
 
   try {
@@ -703,6 +734,19 @@ async function createQuiz() {
 
   btn.disabled = false
   btn.textContent = 'Opprett quiz'
+}
+
+// ── SCHEDULE HELPERS ──
+function formatScheduleDate(isoStr) {
+  if (!isoStr) return ''
+  const d = new Date(isoStr)
+  const now = new Date()
+  const isToday = d.toDateString() === now.toDateString()
+  const isTomorrow = d.toDateString() === new Date(now.getTime() + 86400000).toDateString()
+  const timeStr = d.toLocaleTimeString('no', { hour: '2-digit', minute: '2-digit' })
+  if (isToday) return `i dag kl. ${timeStr}`
+  if (isTomorrow) return `i morgon kl. ${timeStr}`
+  return d.toLocaleDateString('no', { day: 'numeric', month: 'short' }) + ` kl. ${timeStr}`
 }
 
 // ── TOAST ──

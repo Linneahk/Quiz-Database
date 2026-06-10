@@ -61,6 +61,8 @@ async function init() {
     dot.className = 'quiz-color-dot'
     dot.style.background = color.bg
     titleEl.parentNode.insertBefore(dot, titleEl)
+
+    renderScheduleDisplay()
   }
 
   const { data: qs } = await db
@@ -470,6 +472,68 @@ async function downloadPDF() {
   btn.disabled = false
   btn.textContent = '📥 Last ned QR-PDF'
   showToast('✅ PDF lasta ned!')
+}
+
+// ── SCHEDULE ──
+function toDatetimeLocal(isoStr) {
+  if (!isoStr) return ''
+  const d = new Date(isoStr)
+  const pad = n => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+}
+
+function renderScheduleDisplay() {
+  const bar = document.getElementById('scheduleBar')
+  const display = document.getElementById('scheduleDisplay')
+  if (!bar || !display) return
+  const s = currentQuiz?.scheduled_start
+  const e = currentQuiz?.scheduled_end
+  if (!s) {
+    display.innerHTML = `<span style="color:var(--muted,#7a7a9a);font-size:.82rem;">Ingen tidsplan sett</span>`
+  } else {
+    const fmt = d => new Date(d).toLocaleString('no', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })
+    display.innerHTML = `<span style="font-size:.85rem;color:var(--text,#f0f0f5);">▶ ${fmt(s)}</span>${e ? `<span style="color:var(--muted);">→</span><span style="font-size:.85rem;color:var(--text,#f0f0f5);">⏹ ${fmt(e)}</span>` : ''}`
+  }
+}
+
+window.openScheduleEdit = function () {
+  const panel = document.getElementById('scheduleEditPanel')
+  const bar   = document.getElementById('scheduleBar')
+  if (panel) panel.style.display = 'block'
+  if (bar)   bar.style.display   = 'none'
+  const ss = document.getElementById('scheduleStartEdit')
+  const se = document.getElementById('scheduleEndEdit')
+  if (ss) ss.value = toDatetimeLocal(currentQuiz?.scheduled_start)
+  if (se) se.value = toDatetimeLocal(currentQuiz?.scheduled_end)
+}
+
+window.closeScheduleEdit = function () {
+  document.getElementById('scheduleEditPanel').style.display = 'none'
+  document.getElementById('scheduleBar').style.display = 'flex'
+}
+
+window.saveSchedule = async function () {
+  const ssVal = document.getElementById('scheduleStartEdit')?.value
+  const seVal = document.getElementById('scheduleEndEdit')?.value
+  const updates = {
+    scheduled_start: ssVal ? new Date(ssVal).toISOString() : null,
+    scheduled_end:   seVal ? new Date(seVal).toISOString() : null
+  }
+  const { error } = await db.from('quizzes').update(updates).eq('id', quizId)
+  if (error) { showToast('❌ Kunne ikkje lagre tidsplan'); return }
+  currentQuiz = { ...currentQuiz, ...updates }
+  renderScheduleDisplay()
+  closeScheduleEdit()
+  showToast('📅 Tidsplan lagra!')
+}
+
+window.clearSchedule = async function () {
+  const { error } = await db.from('quizzes').update({ scheduled_start: null, scheduled_end: null }).eq('id', quizId)
+  if (error) { showToast('❌ Feil'); return }
+  currentQuiz = { ...currentQuiz, scheduled_start: null, scheduled_end: null }
+  renderScheduleDisplay()
+  closeScheduleEdit()
+  showToast('🗑️ Tidsplan fjerna')
 }
 
 // ── TOAST ──

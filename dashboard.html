@@ -100,6 +100,24 @@
           <label>Farge</label>
           <div class="color-grid" id="colorGrid"></div>
         </div>
+        <div class="modal-field">
+          <label style="display:flex;align-items:center;gap:.5rem;cursor:pointer;user-select:none;">
+            <input type="checkbox" id="scheduleToggle" style="width:16px;height:16px;accent-color:var(--accent, #c8f050);cursor:pointer;" onchange="toggleScheduleFields(this.checked)">
+            📅 Legg til tidsplan <span style="font-size:.78rem;color:var(--muted,#888);font-weight:400;">(valfritt)</span>
+          </label>
+          <div id="scheduleFields" style="display:none;margin-top:.75rem;display:none;">
+            <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+              <div style="flex:1;min-width:140px;">
+                <label style="font-size:.78rem;color:var(--muted,#888);margin-bottom:.3rem;display:block;">Start</label>
+                <input type="datetime-local" id="scheduleStart" style="width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border,#ddd);background:var(--surface,#fff);color:var(--text,#111);font-size:.88rem;" />
+              </div>
+              <div style="flex:1;min-width:140px;">
+                <label style="font-size:.78rem;color:var(--muted,#888);margin-bottom:.3rem;display:block;">Slutt <span style="opacity:.6">(valfritt)</span></label>
+                <input type="datetime-local" id="scheduleEnd" style="width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border,#ddd);background:var(--surface,#fff);color:var(--text,#111);font-size:.88rem;" />
+              </div>
+            </div>
+          </div>
+        </div>
         <div class="modal-actions">
           <button class="btn-cancel" onclick="closeModal()">Avbryt</button>
           <button class="btn-submit" id="submitBtn" onclick="createQuiz()">Opprett quiz</button>
