@@ -489,10 +489,10 @@ function renderScheduleDisplay() {
   const s = currentQuiz?.scheduled_start
   const e = currentQuiz?.scheduled_end
   if (!s) {
-    display.innerHTML = `<span style="color:var(--muted,#7a7a9a);font-size:.82rem;">Ingen tidsplan sett</span>`
+    display.innerHTML = `<span style="color:var(--muted);font-size:.82rem;">Ingen tidsplan sett</span>`
   } else {
     const fmt = d => new Date(d).toLocaleString('no', { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })
-    display.innerHTML = `<span style="font-size:.85rem;color:var(--text,#f0f0f5);">▶ ${fmt(s)}</span>${e ? `<span style="color:var(--muted);">→</span><span style="font-size:.85rem;color:var(--text,#f0f0f5);">⏹ ${fmt(e)}</span>` : ''}`
+    display.innerHTML = `<span style="font-size:.85rem;color:var(--ink);">▶ ${fmt(s)}</span>${e ? `<span style="color:var(--muted);">→</span><span style="font-size:.85rem;color:var(--ink);">⏹ ${fmt(e)}</span>` : ''}`
   }
 }
 

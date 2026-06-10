@@ -46,29 +46,29 @@
     </div>
 
     <!-- TIDSPLAN-BAR -->
-    <div id="scheduleBar" style="margin:0 0 1.25rem;padding:.75rem 1rem;background:var(--surface,#1a1a24);border:1px solid var(--border,#2a2a3a);border-radius:12px;display:flex;align-items:center;flex-wrap:wrap;gap:.6rem;">
-      <span style="font-size:.85rem;color:var(--muted,#7a7a9a);white-space:nowrap;">📅 Tidsplan:</span>
+    <div id="scheduleBar" style="margin:0 0 1.25rem;padding:.75rem 1rem;background:var(--card);border:1px solid var(--border);border-radius:14px;display:flex;align-items:center;flex-wrap:wrap;gap:.6rem;">
+      <span style="font-size:.85rem;color:var(--muted);white-space:nowrap;">📅 Tidsplan:</span>
       <div id="scheduleDisplay" style="flex:1;display:flex;align-items:center;flex-wrap:wrap;gap:.5rem;">
         <!-- filled by JS -->
       </div>
-      <button id="scheduleEditBtn" onclick="openScheduleEdit()" style="font-size:.8rem;padding:.3rem .75rem;border-radius:8px;border:1px solid var(--border,#2a2a3a);background:transparent;color:var(--muted,#7a7a9a);cursor:pointer;">✏️ Endre</button>
+      <button id="scheduleEditBtn" onclick="openScheduleEdit()" style="font-size:.8rem;padding:.3rem .75rem;border-radius:8px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;">✏️ Endre</button>
     </div>
     <!-- TIDSPLAN REDIGERINGSPANEL -->
-    <div id="scheduleEditPanel" style="display:none;margin:-0.5rem 0 1.25rem;padding:1rem;background:var(--surface,#1a1a24);border:1px solid var(--accent,#c8f050);border-radius:12px;">
+    <div id="scheduleEditPanel" style="display:none;margin:-0.5rem 0 1.25rem;padding:1rem;background:var(--card);border:1px solid var(--ink);border-radius:14px;">
       <div style="display:flex;gap:.75rem;flex-wrap:wrap;margin-bottom:.75rem;">
         <div style="flex:1;min-width:160px;">
-          <label style="font-size:.78rem;color:var(--muted,#7a7a9a);margin-bottom:.3rem;display:block;">Start</label>
-          <input type="datetime-local" id="scheduleStartEdit" style="width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border,#2a2a3a);background:var(--bg,#0f0f13);color:var(--text,#f0f0f5);font-size:.88rem;" />
+          <label style="font-size:.78rem;color:var(--muted);margin-bottom:.3rem;display:block;">Start</label>
+          <input type="datetime-local" id="scheduleStartEdit" style="width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--ink);font-size:.88rem;font-family:inherit;" />
         </div>
         <div style="flex:1;min-width:160px;">
-          <label style="font-size:.78rem;color:var(--muted,#7a7a9a);margin-bottom:.3rem;display:block;">Slutt <span style="opacity:.6">(valfritt)</span></label>
-          <input type="datetime-local" id="scheduleEndEdit" style="width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border,#2a2a3a);background:var(--bg,#0f0f13);color:var(--text,#f0f0f5);font-size:.88rem;" />
+          <label style="font-size:.78rem;color:var(--muted);margin-bottom:.3rem;display:block;">Slutt <span style="opacity:.6">(valfritt)</span></label>
+          <input type="datetime-local" id="scheduleEndEdit" style="width:100%;padding:.45rem .6rem;border-radius:8px;border:1px solid var(--border);background:var(--bg);color:var(--ink);font-size:.88rem;font-family:inherit;" />
         </div>
       </div>
       <div style="display:flex;gap:.5rem;">
-        <button onclick="saveSchedule()" style="padding:.4rem 1rem;border-radius:8px;background:var(--accent,#c8f050);color:#111;font-weight:700;border:none;cursor:pointer;font-size:.85rem;">Lagre</button>
-        <button onclick="clearSchedule()" style="padding:.4rem 1rem;border-radius:8px;background:transparent;border:1px solid var(--red,#ff4d6d);color:var(--red,#ff4d6d);cursor:pointer;font-size:.85rem;">Fjern tidsplan</button>
-        <button onclick="closeScheduleEdit()" style="padding:.4rem 1rem;border-radius:8px;background:transparent;border:1px solid var(--border,#2a2a3a);color:var(--muted,#7a7a9a);cursor:pointer;font-size:.85rem;">Avbryt</button>
+        <button onclick="saveSchedule()" style="padding:.4rem 1rem;border-radius:8px;background:var(--ink);color:var(--lime);font-weight:700;border:none;cursor:pointer;font-size:.85rem;font-family:inherit;">Lagre</button>
+        <button onclick="clearSchedule()" style="padding:.4rem 1rem;border-radius:8px;background:transparent;border:1px solid var(--error);color:var(--error);cursor:pointer;font-size:.85rem;font-family:inherit;">Fjern tidsplan</button>
+        <button onclick="closeScheduleEdit()" style="padding:.4rem 1rem;border-radius:8px;background:transparent;border:1px solid var(--border);color:var(--muted);cursor:pointer;font-size:.85rem;font-family:inherit;">Avbryt</button>
       </div>
     </div>
 
