@@ -171,6 +171,28 @@
     </div>
   </div>
 
+  <!-- ENDRE KATEGORI MODAL -->
+  <div class="modal-overlay" id="categoryOverlay" onclick="closeCategoryModalIfBg(event)">
+    <div class="modal">
+      <div class="modal-title">Endre kategori</div>
+      <div class="modal-desc" id="categoryModalDesc"></div>
+      <div class="modal-field">
+        <label>Kategori</label>
+        <div class="tag-picker">
+          <select id="catEditSelect" class="tag-select" onchange="onCatEditSelectChange(this.value)"></select>
+          <div class="tag-new-row" id="catEditNewRow" style="display:none">
+            <input type="text" id="catEditNew" placeholder="Skriv kategorinamn…" maxlength="24" />
+            <button type="button" class="tag-back-btn" onclick="cancelCatEditNew()" title="Avbryt">✕</button>
+          </div>
+        </div>
+      </div>
+      <div class="modal-actions" style="margin-top:16px">
+        <button class="btn-cancel" onclick="closeCategoryModal()">Avbryt</button>
+        <button class="btn-submit" id="catEditSaveBtn" onclick="saveCategoryModal()">Lagre</button>
+      </div>
+    </div>
+  </div>
+
   <!-- TOAST -->
   <div class="toast" id="toast"></div>
 

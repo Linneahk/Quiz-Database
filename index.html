@@ -753,6 +753,7 @@
         localStorage.removeItem('quiz_hunt_start')
         buildColorPicker()
         show('pin-screen')
+        toast('Quizen du var med i er avslutta')
       }
     }
 
@@ -812,6 +813,7 @@
         isPaused = true
         const el = document.getElementById('hunt-timer')
         if (el) { el.textContent = el.textContent.replace(' ⏸', '') + ' ⏸'; el.style.opacity = '0.5' }
+        setScanLocked(true)
       })
       channel.on('broadcast', { event: 'timer_resume' }, (e) => {
         totalPausedMs = e.payload?.total_paused_ms ?? totalPausedMs
@@ -819,6 +821,7 @@
         const el = document.getElementById('hunt-timer')
         if (el) { el.style.opacity = '1' }
         startHuntTimer()
+        setScanLocked(false)
       })
       // Listen for own answers being added (realtime update when returning from question page)
       channel.on('postgres_changes', {
@@ -866,6 +869,7 @@
           show('hunt-screen')
           const el = document.getElementById('hunt-timer')
           if (el) { el.textContent = `${m}:${s} ⏸`; el.style.opacity = '0.5' }
+          setScanLocked(true)
           await refreshAnswers()
           if (!channel) subscribeToSession()
           return
@@ -874,9 +878,28 @@
       document.body.classList.add('hunt-active')
       show('hunt-screen')
       startHuntTimer()
+      setScanLocked(false)
       await refreshAnswers()
       // Subscribe if not already
       if (!channel) subscribeToSession()
+    }
+
+    // ── LÅS SKANN-KNAPPEN under pause ──
+    function setScanLocked(locked) {
+      const btn = document.querySelector('.btn-scan')
+      if (!btn) return
+      if (locked) {
+        btn.dataset.href = btn.getAttribute('href') || btn.dataset.href
+        btn.removeAttribute('href')
+        btn.style.opacity = '0.4'
+        btn.style.pointerEvents = 'none'
+        btn.textContent = '⏸ Pausa av læraren'
+      } else {
+        if (btn.dataset.href) btn.setAttribute('href', btn.dataset.href)
+        btn.style.opacity = '1'
+        btn.style.pointerEvents = ''
+        btn.textContent = '📷 Skann QR-kode'
+      }
     }
 
     // ── TIMER ──

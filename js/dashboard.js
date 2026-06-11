@@ -40,66 +40,73 @@ function findColor(bg) {
   return COLORS.find(c => c.bg === bg) || COLORS[0]
 }
 
-// ── TAG-STORE (localStorage, til DB-kolonne er på plass) ──
-const TAG_KEY = 'quiz_tags_v1'
-function loadTags() {
-  try { return JSON.parse(localStorage.getItem(TAG_KEY) || '{}') }
-  catch { return {} }
-}
-function saveTags(map) {
-  localStorage.setItem(TAG_KEY, JSON.stringify(map))
-}
+// ── KATEGORIAR (lagra i quizzes.category i databasen) ──
 function getTag(quizId) {
-  const map = loadTags()
-  return map[quizId] || ''
+  const q = allQuizzes.find(x => x.id === quizId)
+  return (q && q.category) || ''
 }
-function setTag(quizId, tag) {
-  const map = loadTags()
-  const clean = (tag || '').trim()
-  if (clean) map[quizId] = clean
-  else delete map[quizId]
-  saveTags(map)
+
+// Set kategori på ein quiz (null/tom streng fjernar)
+async function setTag(quizId, tag) {
+  const clean = (tag || '').trim() || null
+  const { error } = await db.from('quizzes').update({ category: clean }).eq('id', quizId)
+  if (error) { console.error('setTag:', error); return false }
+  const q = allQuizzes.find(x => x.id === quizId)
+  if (q) q.category = clean
+  return true
 }
 
 // Alle unike kategorinamn (sortert)
 function getAllCategories() {
-  const map = loadTags()
-  const set = new Set(Object.values(map).filter(Boolean))
+  const set = new Set(allQuizzes.map(q => q.category).filter(Boolean))
   return Array.from(set).sort((a, b) => a.localeCompare(b, 'no'))
 }
 
 // Tel kor mange quizzar som har kvar kategori
 function countByCategory() {
-  const map = loadTags()
   const counts = {}
-  Object.values(map).forEach(t => {
-    if (t) counts[t] = (counts[t] || 0) + 1
+  allQuizzes.forEach(q => {
+    if (q.category) counts[q.category] = (counts[q.category] || 0) + 1
   })
   return counts
 }
 
-// Endre namn på ein kategori (alle quizzar med gammalt namn får nytt)
-function renameCategory(oldName, newName) {
+// Endre namn på ein kategori (alle synlege quizzar med gammalt namn får nytt)
+async function renameCategory(oldName, newName) {
   const clean = (newName || '').trim()
   if (!clean || clean === oldName) return false
-  const map = loadTags()
-  let changed = false
-  Object.keys(map).forEach(qid => {
-    if (map[qid] === oldName) { map[qid] = clean; changed = true }
-  })
-  if (changed) saveTags(map)
-  return changed
+  const ids = allQuizzes.filter(q => q.category === oldName).map(q => q.id)
+  if (ids.length === 0) return false
+  const { error } = await db.from('quizzes').update({ category: clean }).in('id', ids)
+  if (error) { console.error('renameCategory:', error); return false }
+  allQuizzes.forEach(q => { if (q.category === oldName) q.category = clean })
+  return true
 }
 
-// Fjern kategori frå alle quizzar
-function deleteCategory(name) {
-  const map = loadTags()
-  let changed = false
-  Object.keys(map).forEach(qid => {
-    if (map[qid] === name) { delete map[qid]; changed = true }
-  })
-  if (changed) saveTags(map)
-  return changed
+// Fjern kategori frå alle synlege quizzar
+async function deleteCategory(name) {
+  const ids = allQuizzes.filter(q => q.category === name).map(q => q.id)
+  if (ids.length === 0) return false
+  const { error } = await db.from('quizzes').update({ category: null }).in('id', ids)
+  if (error) { console.error('deleteCategory:', error); return false }
+  allQuizzes.forEach(q => { if (q.category === name) q.category = null })
+  return true
+}
+
+// Eingongs-migrering: flytt gamle localStorage-kategoriar inn i databasen
+async function migrateLocalTags() {
+  const TAG_KEY = 'quiz_tags_v1'
+  let map = null
+  try { map = JSON.parse(localStorage.getItem(TAG_KEY) || 'null') } catch {}
+  if (!map) return
+  for (const [qid, tag] of Object.entries(map)) {
+    const q = allQuizzes.find(x => x.id === qid)
+    if (q && tag && !q.category) {
+      const { error } = await db.from('quizzes').update({ category: tag }).eq('id', qid)
+      if (!error) q.category = tag
+    }
+  }
+  localStorage.removeItem(TAG_KEY)
 }
 
 // ── INIT ──
@@ -185,6 +192,8 @@ async function loadQuizzes() {
     } catch(e) { console.error('Sessions fetch error', e) }
   }
 
+  await migrateLocalTags()
+
   updateHeaderStats()
   renderTagChips()
   applyFilters()
@@ -247,6 +256,13 @@ function renderQuizzes(list) {
           </svg>
         </button>
         <div class="quiz-menu-pop" data-menu-for="${q.id}">
+          <button class="quiz-menu-item" data-action="category" data-quiz-id="${q.id}">
+            <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+              <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/>
+              <line x1="7" y1="7" x2="7.01" y2="7"/>
+            </svg>
+            Endre kategori
+          </button>
           <button class="quiz-menu-item danger" data-action="delete" data-quiz-id="${q.id}" data-quiz-name="${nameEsc}">
             <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <polyline points="3 6 5 6 21 6"/>
@@ -300,6 +316,13 @@ function renderQuizzes(list) {
         if (p !== menuPop) p.classList.remove('open')
       })
       menuPop.classList.toggle('open')
+    })
+
+    // kategori-handling i meny
+    menuPop.querySelector('[data-action="category"]').addEventListener('click', (e) => {
+      e.stopPropagation()
+      menuPop.classList.remove('open')
+      openCategoryModal(q.id)
     })
 
     // slett-handling i meny
@@ -365,13 +388,8 @@ function updateHeaderStats() {
 function renderTagChips() {
   const wrap = document.getElementById('tagChips')
   wrap.innerHTML = ''
-  const tagMap = loadTags()
-  // tel kor mange quizzar per tag (berre dei brukaren ser)
-  const counts = {}
-  allQuizzes.forEach(q => {
-    const t = tagMap[q.id]
-    if (t) counts[t] = (counts[t] || 0) + 1
-  })
+  // tel kor mange quizzar per kategori (berre dei brukaren ser)
+  const counts = countByCategory()
   const tags = Object.keys(counts).sort((a, b) => a.localeCompare(b, 'no'))
 
   // Administrer-knapp: berre vis om det finst kategoriar overhovudet
@@ -518,11 +536,11 @@ function startEditCategory(row, oldName) {
   input.focus()
   input.select()
 
-  const commit = () => {
+  const commit = async () => {
     const newName = input.value.trim()
     if (!newName || newName === oldName) return renderCategoryList()
     // Hindra kollisjon med eksisterande namn (då samanslår vi)
-    if (renameCategory(oldName, newName)) {
+    if (await renameCategory(oldName, newName)) {
       showToast(`✏️ Endra til "${newName}"`)
       // Hald activeTag synkronisert om brukaren filtrerte på det gamle namnet
       if (activeTag === oldName) activeTag = newName
@@ -541,14 +559,14 @@ function startEditCategory(row, oldName) {
   })
 }
 
-function askDeleteCategory(name) {
+async function askDeleteCategory(name) {
   const counts = countByCategory()
   const n = counts[name] || 0
   const msg = n > 0
     ? `Slette kategorien "${name}"?\n${n} quiz${n === 1 ? '' : 'zar'} blir utan kategori.`
     : `Slette kategorien "${name}"?`
   if (!confirm(msg)) return
-  deleteCategory(name)
+  await deleteCategory(name)
   if (activeTag === name) activeTag = null
   showToast(`🗑️ Sletta "${name}"`)
   renderCategoryList()
@@ -556,14 +574,86 @@ function askDeleteCategory(name) {
   applyFilters()
 }
 
+// ── ENDRE KATEGORI MODAL (for eksisterande quizzar) ──
+let categoryEditQuizId = null
+
+function openCategoryModal(quizId) {
+  categoryEditQuizId = quizId
+  const q = allQuizzes.find(x => x.id === quizId)
+  document.getElementById('categoryModalDesc').innerHTML =
+    `Vel kategori for <strong style="color:var(--ink)">${escHtml(q ? q.name : '')}</strong>`
+
+  const sel = document.getElementById('catEditSelect')
+  sel.innerHTML = ''
+  sel.appendChild(new Option('— Ingen kategori —', ''))
+  getAllCategories().forEach(c => sel.appendChild(new Option(c, c)))
+  sel.appendChild(new Option('+ Ny kategori…', '__new__'))
+  sel.value = (q && q.category) || ''
+
+  document.getElementById('catEditNewRow').style.display = 'none'
+  document.getElementById('catEditNew').value = ''
+  document.getElementById('categoryOverlay').classList.add('open')
+}
+
+function closeCategoryModal() {
+  document.getElementById('categoryOverlay').classList.remove('open')
+  categoryEditQuizId = null
+}
+function closeCategoryModalIfBg(e) {
+  if (e.target === document.getElementById('categoryOverlay')) closeCategoryModal()
+}
+
+function onCatEditSelectChange(value) {
+  const row = document.getElementById('catEditNewRow')
+  const inp = document.getElementById('catEditNew')
+  if (value === '__new__') {
+    row.style.display = ''
+    setTimeout(() => inp && inp.focus(), 50)
+  } else {
+    row.style.display = 'none'
+    if (inp) inp.value = ''
+  }
+}
+
+function cancelCatEditNew() {
+  const sel = document.getElementById('catEditSelect')
+  if (sel) sel.value = ''
+  document.getElementById('catEditNewRow').style.display = 'none'
+  document.getElementById('catEditNew').value = ''
+}
+
+async function saveCategoryModal() {
+  if (!categoryEditQuizId) return
+  const sel = document.getElementById('catEditSelect')
+  let val = sel.value
+  if (val === '__new__') val = document.getElementById('catEditNew').value.trim()
+
+  const btn = document.getElementById('catEditSaveBtn')
+  btn.disabled = true
+  btn.textContent = 'Lagrar…'
+
+  const ok = await setTag(categoryEditQuizId, val)
+
+  btn.disabled = false
+  btn.textContent = 'Lagre'
+
+  if (ok) {
+    renderTagChips()
+    applyFilters()
+    showToast(val ? `🏷️ Kategori sett til "${val}"` : '🏷️ Kategori fjerna')
+  } else {
+    showToast('❌ Kunne ikkje lagre kategori')
+  }
+  closeCategoryModal()
+}
+
 // ── SEARCH + TAG-FILTER ──
 function applyFilters() {
-  const term   = currentSearch.toLowerCase()
-  const tagMap = loadTags()
+  const term = currentSearch.toLowerCase()
 
   const list = allQuizzes.filter(q => {
     const nameOk = !term || (q.name || '').toLowerCase().includes(term)
-    const tagOk  = !activeTag || tagMap[q.id] === activeTag
+    const tagOk  = !activeTag || q.category === activeTag
     return nameOk && tagOk
   })
 
@@ -674,7 +764,6 @@ async function confirmDeleteQuiz() {
     if (error) throw error
 
     allQuizzes = allQuizzes.filter(q => q.id !== id)
-    setTag(id, '') // fjern tag-mapping for sletta quiz
     updateHeaderStats()
     renderTagChips()
     applyFilters()
@@ -712,16 +801,14 @@ async function createQuiz() {
     question_count:   0,
     session_count:    0,
     scheduled_start:  scheduledStart,
-    scheduled_end:    scheduledEnd
+    scheduled_end:    scheduledEnd,
+    category:         getSelectedTagFromModal() || null
   }
 
   try {
     const { data, error } = await db.from('quizzes').insert(newQuiz).select().single()
     if (error) throw error
     allQuizzes.unshift(data)
-    // lagre tag (frå dropdown eller nytt-input)
-    const tagVal = getSelectedTagFromModal()
-    if (tagVal) setTag(data.id, tagVal)
     updateHeaderStats()
     renderTagChips()
     applyFilters()
@@ -783,6 +870,7 @@ document.addEventListener('keydown', e => {
     closeQrModal()
     closeDeleteModal()
     closeManageModal()
+    closeCategoryModal()
   }
   if (e.key === 'Enter' && document.getElementById('modalOverlay').classList.contains('open')) {
     // Ikkje submit om brukaren skriv i ny-tag-feltet (då skal Enter lukka det)
@@ -810,5 +898,10 @@ window.cancelNewTag           = cancelNewTag
 window.openManageModal        = openManageModal
 window.closeManageModal       = closeManageModal
 window.closeManageModalIfBg   = closeManageModalIfBg
+window.closeCategoryModal     = closeCategoryModal
+window.closeCategoryModalIfBg = closeCategoryModalIfBg
+window.onCatEditSelectChange  = onCatEditSelectChange
+window.cancelCatEditNew       = cancelCatEditNew
+window.saveCategoryModal      = saveCategoryModal
 
 init()

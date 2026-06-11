@@ -440,30 +440,54 @@ async function downloadPDF() {
     const x = margin + col * (cardW + 6)
     const y = margin + row * (cardH + 6)
 
-    // Card background
+    // Print-vennleg kort: kvit bakgrunn med farga ramme (sparer blekk)
     const r = parseInt(bgColor.slice(1,3),16)
     const g = parseInt(bgColor.slice(3,5),16)
     const b = parseInt(bgColor.slice(5,7),16)
-    doc.setFillColor(r, g, b)
+    doc.setFillColor(255,255,255)
     doc.roundedRect(x, y, cardW, cardH, 4, 4, 'F')
+    doc.setDrawColor(r, g, b)
+    doc.setLineWidth(1.2)
+    doc.roundedRect(x + 0.6, y + 0.6, cardW - 1.2, cardH - 1.2, 4, 4, 'S')
+    doc.setLineWidth(0.2)
 
-    // Dashed border
-    doc.setDrawColor(150,150,150)
+    // Stipla klippelinje utanfor ramma
+    doc.setDrawColor(170,170,170)
     doc.setLineDash([2,2])
-    doc.roundedRect(x, y, cardW, cardH, 4, 4, 'S')
+    doc.roundedRect(x - 2, y - 2, cardW + 4, cardH + 4, 4, 4, 'S')
     doc.setLineDash([])
 
     // QR code centered
     const qrUrl = await qrDataUrl(`${BASE_URL}?id=${q.id}`)
     if (qrUrl) {
-      const qrSize = Math.min(cardW, cardH) * 0.6
+      const qrSize = Math.min(cardW, cardH) * 0.55
       const qrX = x + (cardW - qrSize) / 2
-      const qrY = y + (cardH - qrSize) / 2
+      const qrY = y + (cardH - qrSize) / 2 - 2
       // White background behind QR
       doc.setFillColor(255,255,255)
       doc.roundedRect(qrX - 3, qrY - 3, qrSize + 6, qrSize + 6, 2, 2, 'F')
       doc.addImage(qrUrl, 'PNG', qrX, qrY, qrSize, qrSize)
     }
+
+    // Spørsmålsnummer: farga sirkel-badge oppe til venstre
+    const num = String(i + 1)
+    const ir = parseInt(inkColor.slice(1,3),16)
+    const ig = parseInt(inkColor.slice(3,5),16)
+    const ib = parseInt(inkColor.slice(5,7),16)
+    doc.setFillColor(r, g, b)
+    doc.circle(x + 11, y + 11, 7, 'F')
+    doc.setTextColor(ir, ig, ib)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(num.length > 1 ? 11 : 13)
+    doc.text(num, x + 11, y + 11, { align: 'center', baseline: 'middle' })
+
+    // Tekstlinje nederst: "Spørsmål N"
+    doc.setTextColor(17,17,24)
+    doc.setFont('helvetica', 'bold')
+    doc.setFontSize(10)
+    doc.text(`Spørsmål ${num}`,
+      x + cardW / 2, y + cardH - 7,
+      { align: 'center', maxWidth: cardW - 10 })
   }
 
   const quizName = currentQuiz ? currentQuiz.name.replace(/\s+/g,'_') : 'quiz'

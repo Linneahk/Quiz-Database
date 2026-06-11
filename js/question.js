@@ -12,6 +12,25 @@ async function init() {
   if (!questionId)                               return showError('Ingen spørsmål-ID. Skann QR-koden på nytt.')
   if (!identity?.playerId || !identity?.sessionId) return showNoSession()
 
+  // Sjekk at sesjonen framleis finst og er aktiv
+  const { data: sess } = await db.from('sessions').select('status,is_paused').eq('id', identity.sessionId).maybeSingle()
+  if (!sess) {
+    localStorage.removeItem('quiz_identity')
+    localStorage.removeItem('quiz_hunt_start')
+    return showSessionGone()
+  }
+  if (sess.status === 'finished') {
+    localStorage.removeItem('quiz_identity')
+    localStorage.removeItem('quiz_hunt_start')
+    return showSessionOver()
+  }
+  if (sess.status === 'waiting') {
+    return showError('Jakta har ikkje starta enno. Vent til læraren startar!')
+  }
+  if (sess.is_paused) {
+    return showPaused()
+  }
+
   const { data: q, error } = await db.from('questions').select('*').eq('id', questionId).single()
   if (error || !q) return showError('Fann ikkje spørsmålet. Er QR-koden riktig?')
 
@@ -81,6 +100,16 @@ function renderQuestion(q, existing) {
 async function submitAnswer(chosenIdx, options, q) {
   // Lock immediately
   document.querySelectorAll('.opt-btn').forEach(b => b.disabled = true)
+
+  // Dobbeltsjekk at quizen ikkje er pausa/avslutta (hindrar juks under pause)
+  const { data: sessNow } = await db.from('sessions')
+    .select('status,is_paused').eq('id', identity.sessionId).maybeSingle()
+  if (!sessNow || sessNow.status !== 'active') {
+    return showSessionOver()
+  }
+  if (sessNow.is_paused) {
+    return showPaused()
+  }
 
   const chosenText = options[chosenIdx]
   // Handle both single answer (string) and multi-answer (JSON array)
@@ -166,6 +195,36 @@ function showNoSession() {
       <div style="font-weight:700;margin-bottom:.5rem;color:var(--text)">Ikkje med i ein quiz</div>
       <div style="font-size:.9rem;color:var(--muted);margin-bottom:1.5rem;">Skriv inn PIN-koden frå læraren fyrst.</div>
       <a href="index.html" class="btn-back">Bli med →</a>
+    </div>`
+}
+
+function showPaused() {
+  document.getElementById('content').innerHTML = `
+    <div class="center-msg">
+      <div style="font-size:2.5rem">⏸️</div>
+      <div style="font-weight:700;margin-bottom:.5rem;color:var(--text)">Quizen er pausa</div>
+      <div style="font-size:.9rem;color:var(--muted);margin-bottom:1.5rem;">Læraren har pausa tidtakaren. Vent til quizen startar att, og skann QR-koden på nytt.</div>
+      <a href="index.html" class="btn-back">← Tilbake til jakta</a>
+    </div>`
+}
+
+function showSessionOver() {
+  document.getElementById('content').innerHTML = `
+    <div class="center-msg">
+      <div style="font-size:2.5rem">🏁</div>
+      <div style="font-weight:700;margin-bottom:.5rem;color:var(--text)">Quizen er avslutta</div>
+      <div style="font-size:.9rem;color:var(--muted);margin-bottom:1.5rem;">Læraren har avslutta denne quizen. Takk for innsatsen!</div>
+      <a href="index.html" class="btn-back">Bli med i ny quiz →</a>
+    </div>`
+}
+
+function showSessionGone() {
+  document.getElementById('content').innerHTML = `
+    <div class="center-msg">
+      <div style="font-size:2.5rem">⌛</div>
+      <div style="font-weight:700;margin-bottom:.5rem;color:var(--text)">Quizen finst ikkje lenger</div>
+      <div style="font-size:.9rem;color:var(--muted);margin-bottom:1.5rem;">Denne quiz-økta er utgått eller sletta. Spør læraren om ny PIN.</div>
+      <a href="index.html" class="btn-back">Til startsida →</a>
     </div>`
 }
 
