@@ -657,18 +657,16 @@
       document.getElementById('pin-url').textContent = base
       document.getElementById('join-strong').textContent = base
       renderLobbyPlayers()
-      // Poll player list every 3s as reliable fallback for join/leave
-      if (window._lobbyPoll) clearInterval(window._lobbyPoll)
-      window._lobbyPoll = setInterval(async () => {
-        const { data: fresh } = await sb.from('session_players').select('*').eq('session_id', sessionId).eq('is_active', true)
-        if (fresh) { players = fresh; renderLobbyPlayers() }
-      }, 3000)
     }
 
     function setupRealtime() {
       channel = sb.channel('session:' + sessionId)
       channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'session_players', filter: `session_id=eq.${sessionId}` }, (p) => {
-        players.push(p.new); renderLobbyPlayers()
+        // Unngå duplikat viss vi allereie har spelaren frå ein tidlegare fetch
+        if (!players.find(x => x.id === p.new.id)) {
+          players.push(p.new)
+          renderLobbyPlayers()
+        }
       })
       channel.on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'session_players', filter: `session_id=eq.${sessionId}` }, async () => {
         const { data: fresh } = await sb.from('session_players').select('*').eq('session_id', sessionId).eq('is_active', true)
@@ -690,10 +688,16 @@
         if (idx >= 0) players[idx] = p.new; else players.push(p.new)
         refreshLeaderboard()
       })
-      channel.subscribe((status, err) => {
+      channel.subscribe(async (status, err) => {
         const el = document.getElementById('rtstat')
-        if (status === 'SUBSCRIBED') { el.textContent = '🟢 Realtime tilkobla'; el.style.color = 'var(--accent)' }
-        else if (status === 'CHANNEL_ERROR') { el.textContent = '🔴 Realtime feil'; el.style.color = 'var(--red)'; console.error(err) }
+        if (status === 'SUBSCRIBED') {
+          el.textContent = '🟢 Realtime tilkobla'; el.style.color = 'var(--accent)'
+          // Hent fersk spelarliste ved (re)tilkobling — fangar opp eventuelle missede join-events
+          const { data: fresh } = await sb.from('session_players').select('*').eq('session_id', sessionId).eq('is_active', true)
+          if (fresh) { players = fresh; renderLobbyPlayers() }
+        } else if (status === 'CHANNEL_ERROR') {
+          el.textContent = '🔴 Realtime feil — prøv å laste sida på nytt'; el.style.color = 'var(--red)'; console.error(err)
+        }
       })
     }
 
@@ -721,7 +725,7 @@
       }
       await channel.send({ type: 'broadcast', event: 'game_start', payload: { session_id: sessionId } })
 
-      if (window._lobbyPoll) { clearInterval(window._lobbyPoll); window._lobbyPoll = null }
+
       document.getElementById('lobby').style.display = 'none'
       const huntEl = document.getElementById('hunt'); huntEl.style.display = 'flex'
       document.getElementById('hunt-qname').textContent = quizName
