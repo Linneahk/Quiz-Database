@@ -827,15 +827,20 @@
       channel.on('postgres_changes', {
         event: 'INSERT', schema: 'public', table: 'session_answers',
         filter: `player_id=eq.${playerId}`
-      }, (payload) => {
+      }, () => {
+        _newAnswerSinceLastRefresh = true
         refreshAnswers()
       })
       channel.subscribe()
     }
 
-    // Refresh answers when student returns from question.html (tab becomes visible again)
+    // Refresh answers berre viss eleven har svara på noko sidan sist
+    let _newAnswerSinceLastRefresh = false
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && playerId) refreshAnswers()
+      if (!document.hidden && playerId && _newAnswerSinceLastRefresh) {
+        _newAnswerSinceLastRefresh = false
+        refreshAnswers()
+      }
     })
 
     // ── START HUNT ──

@@ -153,7 +153,7 @@ function buildColorGrid() {
 // ── LOAD QUIZZES ──
 async function loadQuizzes() {
   try {
-    let query = db.from('quizzes').select('*').order('created_at', { ascending: false })
+    let query = db.from('quizzes').select('id,name,color,category,question_count,session_count,scheduled_start,scheduled_end,teacher_id,created_at').order('created_at', { ascending: false })
     if (!isAdmin) query = query.eq('teacher_id', currentUser.id)
 
     const { data, error } = await query

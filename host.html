@@ -582,6 +582,7 @@
     let sessionId = null, players = [], totalQs = 0, channel = null
     let huntStartTime = null, timerInt = null, quizName = ''
     let isPaused = false, pausedAt = null, totalPausedMs = 0
+    let countMap = {} // lokal svar-tel per spelar — unngår DB-kall på kvart svar
 
     async function init() {
       if (!quizId) { toast('Ingen quiz vald'); return }
@@ -669,30 +670,32 @@
         }
       })
       channel.on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'session_players', filter: `session_id=eq.${sessionId}` }, async () => {
-        const { data: fresh } = await sb.from('session_players').select('*').eq('session_id', sessionId).eq('is_active', true)
-        players = fresh || []
+        // Spelar sletta — treng full re-fetch for å fjerne frå lista
+        await refreshLeaderboard()
         renderLobbyPlayers()
-        refreshLeaderboard()
       })
       channel.on('broadcast', { event: 'player_left' }, async () => {
-        const { data: fresh } = await sb.from('session_players').select('*').eq('session_id', sessionId).eq('is_active', true)
-        players = fresh || []
+        // Spelar forlet — treng full re-fetch
+        await refreshLeaderboard()
         renderLobbyPlayers()
-        refreshLeaderboard()
       })
-      channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'session_answers', filter: `session_id=eq.${sessionId}` }, () => {
-        refreshLeaderboard()
+      channel.on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'session_answers', filter: `session_id=eq.${sessionId}` }, (p) => {
+        // Nytt svar — oppdater lokal teljing, ingen DB-kall
+        const pid = p.new.player_id
+        countMap[pid] = (countMap[pid] || 0) + 1
+        renderLeaderboard()
       })
       channel.on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'session_players', filter: `session_id=eq.${sessionId}` }, (p) => {
+        // Score-oppdatering — oppdater lokal array, ingen DB-kall
         const idx = players.findIndex(x => x.id === p.new.id)
         if (idx >= 0) players[idx] = p.new; else players.push(p.new)
-        refreshLeaderboard()
+        renderLeaderboard()
       })
       channel.subscribe(async (status, err) => {
         const el = document.getElementById('rtstat')
         if (status === 'SUBSCRIBED') {
           el.textContent = '🟢 Realtime tilkobla'; el.style.color = 'var(--accent)'
-          // Hent fersk spelarliste ved (re)tilkobling — fangar opp eventuelle missede join-events
+          // Full re-fetch ved (re)tilkobling — initialiserer lokal state
           const { data: fresh } = await sb.from('session_players').select('*').eq('session_id', sessionId).eq('is_active', true)
           if (fresh) { players = fresh; renderLobbyPlayers() }
         } else if (status === 'CHANNEL_ERROR') {
@@ -787,37 +790,35 @@
       }
     }
 
+    // Full DB-fetch — bruk berre ved oppstart, reconnect og spelar-leave
     async function refreshLeaderboard() {
-      // Fetch latest player scores and answer counts
-      const { data: playerData } = await sb
-        .from('session_players')
-        .select('id, nickname, avatar_color, total_score, hunt_finished_at')
-        .eq('session_id', sessionId)
-        .eq('is_active', true)
+      const [{ data: playerData }, { data: answerCounts }] = await Promise.all([
+        sb.from('session_players')
+          .select('id, nickname, avatar_color, total_score, hunt_finished_at')
+          .eq('session_id', sessionId)
+          .eq('is_active', true),
+        sb.from('session_answers')
+          .select('player_id')
+          .eq('session_id', sessionId)
+      ])
+      // Initialiser lokal countMap frå DB-data
+      countMap = {}
+      ;(answerCounts || []).forEach(a => { countMap[a.player_id] = (countMap[a.player_id] || 0) + 1 })
+      players = playerData || []
+      renderLeaderboard()
+    }
 
-      // Fetch answer counts per player
-      const { data: answerCounts } = await sb
-        .from('session_answers')
-        .select('player_id')
-        .eq('session_id', sessionId)
-
-      const countMap = {}
-        ; (answerCounts || []).forEach(a => { countMap[a.player_id] = (countMap[a.player_id] || 0) + 1 })
-
-      // Sort: by score desc, then by finish time asc (tiebreak), then by answer count desc
-      const sorted = (playerData || []).sort((a, b) => {
+    // Berre re-render — ingen DB-kall
+    function renderLeaderboard() {
+      const sorted = [...players].sort((a, b) => {
         if (b.total_score !== a.total_score) return b.total_score - a.total_score
-        // Tiebreak: finished faster wins
         if (a.hunt_finished_at && b.hunt_finished_at) return new Date(a.hunt_finished_at) - new Date(b.hunt_finished_at)
         if (a.hunt_finished_at) return -1
         if (b.hunt_finished_at) return 1
         return (countMap[b.id] || 0) - (countMap[a.id] || 0)
       })
-
-      players = sorted
       const MEDALS = ['🥇', '🥈', '🥉']
       const RANK_CLS = ['gold', 'silver', 'bronze']
-
       document.getElementById('lb-list').innerHTML = sorted.length === 0
         ? '<p style="color:var(--muted);font-size:.85rem;text-align:center;padding:.5rem;">Ventar på svar…</p>'
         : sorted.map((p, i) => {

@@ -31,7 +31,7 @@ async function init() {
     return showPaused()
   }
 
-  const { data: q, error } = await db.from('questions').select('*').eq('id', questionId).single()
+  const { data: q, error } = await db.from('questions').select('id,major_id,question_text,options,answer,image_url,time_limit').eq('id', questionId).single()
   if (error || !q) return showError('Fann ikkje spørsmålet. Er QR-koden riktig?')
 
   const [existingRes, playerRes, allQsRes] = await Promise.all([
