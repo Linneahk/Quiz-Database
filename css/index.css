@@ -1,0 +1,634 @@
+:root {
+  --bg: #0f0f13;
+  --surface: #1a1a24;
+  --border: #2a2a3a;
+  --accent: #c8f050;
+  --text: #f0f0f5;
+  --muted: #7a7a9a;
+  --red: #ff4d6d;
+  --green: #50f0a0;
+}
+
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ── BASE ── */
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Epilogue', sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(.75rem, 3vw, 1.25rem);
+}
+
+/* When hunt is active, body becomes a plain block so hunt-screen fills viewport */
+body.hunt-active {
+  display: block;
+  padding: 0;
+}
+
+/* ── SCREENS ── */
+.screen {
+  width: 100%;
+  max-width: 440px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.screen.hidden {
+  display: none !important;
+}
+
+/* Hunt screen overrides - full viewport, no max-width */
+#hunt-screen {
+  max-width: 100%;
+  text-align: left;
+  align-items: stretch;
+  min-height: 100vh;
+  flex-direction: column;
+}
+
+/* Done screen stays centered */
+#done-screen {
+  max-width: 440px;
+}
+
+/* ── TYPOGRAPHY ── */
+.logo {
+  font-family: 'Fraunces', serif;
+  font-weight: 900;
+  color: var(--accent);
+  font-size: clamp(1.2rem, 3vw, 1.4rem);
+  margin-bottom: clamp(1.25rem, 4vw, 2rem);
+}
+
+h1 {
+  font-family: 'Fraunces', serif;
+  font-weight: 900;
+  line-height: 1.1;
+  font-size: clamp(1.6rem, 5vw, 2.2rem);
+  margin-bottom: .4rem;
+}
+
+.sub {
+  color: var(--muted);
+  font-size: clamp(.85rem, 2.5vw, .95rem);
+  margin-bottom: clamp(1.25rem, 4vw, 1.75rem);
+}
+
+/* ── INPUTS ── */
+.iw {
+  width: 100%;
+  margin-bottom: 1rem;
+}
+
+input {
+  width: 100%;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  border-radius: 14px;
+  padding: .85rem 1rem;
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  color: var(--text);
+  text-align: center;
+  letter-spacing: .12em;
+  outline: none;
+  transition: border-color .2s;
+  font-size: clamp(1.3rem, 5vw, 1.8rem);
+}
+
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+}
+
+input:focus {
+  border-color: var(--accent);
+}
+
+input.sm {
+  font-size: clamp(.95rem, 3vw, 1.15rem);
+  letter-spacing: 0;
+}
+
+input::placeholder {
+  color: var(--muted);
+  font-weight: 400;
+  letter-spacing: 0;
+  font-family: 'Epilogue', sans-serif;
+  font-size: clamp(.85rem, 2.5vw, 1rem);
+}
+
+/* ── BUTTONS ── */
+.btn {
+  width: 100%;
+  background: var(--accent);
+  color: #0f0f13;
+  border: none;
+  border-radius: 14px;
+  padding: .85rem 1rem;
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: clamp(.95rem, 3vw, 1.15rem);
+  transition: transform .15s, opacity .15s;
+  box-shadow: 0 4px 20px rgba(200, 240, 80, .2);
+}
+
+.btn:hover {
+  transform: translateY(-2px);
+}
+
+.btn:disabled {
+  opacity: .4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn.ghost {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  box-shadow: none;
+  margin-top: .6rem;
+}
+
+/* ── COLOR PICKER ── */
+.crow {
+  display: flex;
+  gap: .5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-bottom: 1.25rem;
+}
+
+.cdot {
+  width: clamp(26px, 5vw, 32px);
+  height: clamp(26px, 5vw, 32px);
+  border-radius: 50%;
+  cursor: pointer;
+  border: 3px solid transparent;
+  transition: transform .15s, border-color .15s;
+  flex-shrink: 0;
+}
+
+.cdot.on {
+  border-color: #fff;
+  transform: scale(1.15);
+}
+
+/* ── WAITING ── */
+.pulse {
+  width: clamp(56px, 12vw, 72px);
+  height: clamp(56px, 12vw, 72px);
+  border-radius: 50%;
+  border: 3px solid var(--accent);
+  margin: 0 auto 1.25rem;
+  animation: pulse 2s ease-in-out infinite;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(1.4rem, 5vw, 1.8rem);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(200, 240, 80, .35);
+  }
+
+  50% {
+    box-shadow: 0 0 0 16px rgba(200, 240, 80, 0);
+  }
+}
+
+.chip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: .85rem 2rem;
+  margin-top: 1.25rem;
+  width: 100%;
+  max-width: 300px;
+}
+
+.chip .lbl {
+  color: var(--muted);
+  font-size: .78rem;
+  margin-bottom: .2rem;
+}
+
+.chip .nm {
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  font-size: clamp(1rem, 4vw, 1.2rem);
+}
+
+/* ── LEAVE BUTTON ── */
+.btn-leave {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  background: transparent;
+  color: var(--red);
+  border: 1px solid var(--red);
+  border-radius: 10px;
+  padding: .4rem .9rem;
+  font-family: 'Epilogue', sans-serif;
+  font-size: clamp(.75rem, 2vw, .82rem);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background .15s, color .15s;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.btn-leave:hover {
+  background: var(--red);
+  color: #fff;
+}
+
+/* ── HUNT SCREEN ── */
+.hunt-header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: clamp(.65rem, 2vw, .9rem) clamp(.75rem, 3vw, 1.25rem);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.hunt-logo {
+  font-family: 'Fraunces', serif;
+  font-weight: 900;
+  color: var(--accent);
+  font-size: clamp(.9rem, 2.5vw, 1.1rem);
+  white-space: nowrap;
+}
+
+.hunt-score {
+  font-family: 'Fraunces', serif;
+  font-weight: 900;
+  font-size: clamp(.9rem, 2.5vw, 1.1rem);
+  white-space: nowrap;
+}
+
+.hunt-score span {
+  color: var(--accent);
+}
+
+.hunt-body {
+  padding: clamp(.75rem, 3vw, 1.25rem);
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+/* Hunt card */
+.hunt-go {
+  background: linear-gradient(135deg, #1a2a00, #2a4a00);
+  border: 2px solid var(--accent);
+  border-radius: 20px;
+  padding: clamp(1rem, 4vw, 1.5rem);
+  margin-bottom: 1.25rem;
+}
+
+.go-emoji {
+  font-size: clamp(1.8rem, 5vw, 2.5rem);
+  margin-bottom: .4rem;
+  text-align: center;
+}
+
+.hunt-go h2 {
+  font-family: 'Fraunces', serif;
+  font-weight: 900;
+  color: var(--accent);
+  font-size: clamp(1.2rem, 4vw, 1.6rem);
+  margin-bottom: .25rem;
+}
+
+.hunt-go p {
+  color: var(--muted);
+  font-size: clamp(.8rem, 2.5vw, .9rem);
+}
+
+.timer-display {
+  font-family: 'Fraunces', serif;
+  font-weight: 900;
+  color: var(--text);
+  font-size: clamp(1.6rem, 6vw, 2.2rem);
+  margin-top: .5rem;
+}
+
+.btn-scan {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  background: var(--accent);
+  color: #0f0f13;
+  text-decoration: none;
+  border-radius: 14px;
+  padding: clamp(.75rem, 2.5vw, .9rem) 1rem;
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  font-size: clamp(.95rem, 3vw, 1.1rem);
+  margin-top: 1rem;
+  width: 100%;
+  transition: transform .15s, box-shadow .15s;
+  box-shadow: 0 4px 20px rgba(200, 240, 80, .3);
+}
+
+.btn-scan:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(200, 240, 80, .4);
+}
+
+/* Progress */
+.progress-section {
+  margin-bottom: 1.25rem;
+}
+
+.progress-label {
+  display: flex;
+  justify-content: space-between;
+  font-size: clamp(.75rem, 2.5vw, .85rem);
+  color: var(--muted);
+  margin-bottom: .5rem;
+}
+
+.progress-bar-wrap {
+  height: 10px;
+  background: var(--border);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.progress-bar {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 99px;
+  transition: width .5s ease;
+}
+
+/* Answered list */
+.answered-title {
+  font-size: clamp(.7rem, 2vw, .78rem);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: .65rem;
+}
+
+.answered-list {
+  display: flex;
+  flex-direction: column;
+  gap: .5rem;
+}
+
+.ans-row {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: clamp(.55rem, 2vw, .75rem) clamp(.65rem, 2.5vw, 1rem);
+  font-size: clamp(.8rem, 2.5vw, .9rem);
+}
+
+.ans-row.correct {
+  border-color: #2d5a1b;
+}
+
+.ans-row.wrong {
+  border-color: #5a1b1b;
+}
+
+.ans-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.ans-text {
+  flex: 1;
+  text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.ans-pts {
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+  color: var(--accent);
+  font-size: .85rem;
+  flex-shrink: 0;
+}
+
+/* ── DONE SCREEN ── */
+.done-card {
+  background: var(--surface);
+  border: 2px solid var(--accent);
+  border-radius: 20px;
+  padding: clamp(1.5rem, 5vw, 2rem);
+  text-align: center;
+  width: 100%;
+  box-shadow: 0 0 40px rgba(200, 240, 80, .1);
+}
+
+.done-trophy {
+  font-size: clamp(3rem, 10vw, 4rem);
+  margin-bottom: .65rem;
+}
+
+.done-score {
+  font-family: 'Fraunces', serif;
+  font-weight: 900;
+  color: var(--accent);
+  line-height: 1;
+  font-size: clamp(3rem, 10vw, 4rem);
+}
+
+.done-time {
+  color: var(--muted);
+  font-size: clamp(.82rem, 2.5vw, .95rem);
+  margin-top: .5rem;
+}
+
+/* ── MISC ── */
+.tlink {
+  position: fixed;
+  bottom: 1rem;
+  right: 1rem;
+  font-size: clamp(.75rem, 2.5vw, .9rem);
+  color: var(--accent);
+  text-decoration: none;
+  opacity: .8;
+  transition: opacity .2s;
+  background: rgba(255, 255, 255, .06);
+  padding: .3rem .65rem;
+  border-radius: 99px;
+  border: 1px solid rgba(255, 255, 255, .15);
+}
+
+.tlink:hover {
+  opacity: 1;
+}
+
+.toast {
+  position: fixed;
+  bottom: 1.5rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: .6rem 1.2rem;
+  font-size: clamp(.82rem, 2.5vw, .9rem);
+  z-index: 999;
+  max-width: 90vw;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ── LEAVE MODAL ── */
+.leave-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, .7);
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.leave-overlay.active {
+  display: flex;
+}
+
+.leave-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 1.75rem 1.5rem;
+  max-width: 340px;
+  width: 100%;
+  text-align: center;
+}
+
+.leave-box .leave-icon {
+  font-size: 2rem;
+  margin-bottom: .75rem;
+}
+
+.leave-box h3 {
+  font-family: 'Fraunces', serif;
+  font-weight: 900;
+  font-size: 1.2rem;
+  margin-bottom: .5rem;
+  color: var(--text);
+}
+
+.leave-box p {
+  font-size: .875rem;
+  color: var(--muted);
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.leave-actions {
+  display: flex;
+  gap: .75rem;
+}
+
+.leave-actions button {
+  flex: 1;
+  padding: .85rem;
+  border-radius: 12px;
+  font-size: .95rem;
+  cursor: pointer;
+}
+
+.btn-leave-cancel {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted);
+  font-family: 'Epilogue', sans-serif;
+  font-weight: 600;
+}
+
+.btn-leave-confirm {
+  border: none;
+  background: var(--red);
+  color: #fff;
+  font-family: 'Fraunces', serif;
+  font-weight: 700;
+}
+
+/* ── TABLET / DESKTOP (≥600px): hunt card goes side-by-side ── */
+@media(min-width:600px) {
+  .hunt-go {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 1.25rem;
+    text-align: left;
+  }
+
+  .go-emoji {
+    display: none;
+  }
+
+  .btn-scan {
+    width: auto;
+    min-width: 200px;
+    margin-top: 0;
+  }
+
+  .hunt-body {
+    max-width: 720px;
+  }
+}
+
+/* ── SMALL PHONES (≤360px) ── */
+@media(max-width:360px) {
+  .cdot {
+    width: 24px;
+    height: 24px;
+  }
+
+  .hunt-header {
+    gap: .35rem;
+  }
+
+  .hunt-logo {
+    font-size: .82rem;
+  }
+
+  .hunt-score {
+    font-size: .82rem;
+  }
+}

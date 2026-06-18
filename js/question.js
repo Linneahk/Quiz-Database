@@ -130,38 +130,22 @@ async function submitAnswer(chosenIdx, options, q) {
   })
 
   try {
+    // DB-trigger (fn_verify_session_answer) verifiserer is_correct og points_earned server-side.
+    // DB-trigger (fn_update_player_score) oppdaterer total_score og hunt_finished_at automatisk.
     await db.from('session_answers').insert({
       session_id:       identity.sessionId,
       player_id:        identity.playerId,
       question_id:      q.id,
       selected_option:  chosenText,
-      is_correct:       isCorrect,
-      points_earned:    pts,
+      is_correct:       isCorrect,   // overskriven av trigger, men nyttig for visning
+      points_earned:    pts,         // overskriven av trigger
       response_time_ms: null
     })
 
-    // Always fetch latest score to keep display accurate
+    // Les oppdatert score frå DB (trigger har kjørt ferdig)
     const { data: playerAfter } = await db.from('session_players')
       .select('total_score').eq('id', identity.playerId).single()
-    if (isCorrect) {
-      const newScore = (playerAfter?.total_score || 0) + pts
-      await db.from('session_players').update({ total_score: newScore }).eq('id', identity.playerId)
-      updateHeader(newScore, null)
-    } else {
-      updateHeader(playerAfter?.total_score || 0, null)
-    }
-
-    // Check if all questions answered
-    const [answeredRes, allQsRes] = await Promise.all([
-      db.from('session_answers').select('id')
-        .eq('player_id', identity.playerId).eq('session_id', identity.sessionId),
-      db.from('questions').select('id').eq('major_id', identity.quizId)
-    ])
-    if ((answeredRes.data?.length || 0) >= (allQsRes.data?.length || 0)) {
-      await db.from('session_players')
-        .update({ hunt_finished_at: new Date().toISOString() })
-        .eq('id', identity.playerId)
-    }
+    updateHeader(playerAfter?.total_score || 0, null)
   } catch (err) {
     console.error('Kunne ikkje lagre svar:', err)
   }
