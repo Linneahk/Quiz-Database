@@ -31,7 +31,8 @@ async function init() {
     return showPaused()
   }
 
-  const { data: q, error } = await db.from('questions').select('id,major_id,question_text,options,answer,image_url,time_limit').eq('id', questionId).single()
+  // NB: 'answer' er IKKJE tilgjengeleg for anon lenger — fasit hentast via RPC etter innsending
+  const { data: q, error } = await db.from('questions').select('id,major_id,question_text,options,image_url,time_limit').eq('id', questionId).single()
   if (error || !q) return showError('Fann ikkje spørsmålet. Er QR-koden riktig?')
 
   const [existingRes, playerRes, allQsRes] = await Promise.all([
@@ -42,7 +43,19 @@ async function init() {
   ])
 
   updateHeader(playerRes.data?.total_score || 0, allQsRes.data?.length || 0)
-  renderQuestion(q, existingRes.data)
+
+  // Allereie svara → hent fasit (RPC gir berre fasit ETTER innsendt svar)
+  let correctAnswers = null
+  if (existingRes.data) correctAnswers = await fetchCorrectAnswers(q.id)
+  renderQuestion(q, existingRes.data, correctAnswers)
+}
+
+// Hentar fasit via SECURITY DEFINER-RPC — fungerer berre om spelaren har svara
+async function fetchCorrectAnswers(qid) {
+  const { data } = await db.rpc('get_question_answer', { p_question_id: qid, p_player_id: identity.playerId })
+  if (!data) return []
+  try { const p = JSON.parse(data); return Array.isArray(p) ? p : [data] }
+  catch { return [data] }
 }
 
 function updateHeader(score, total) {
@@ -52,7 +65,7 @@ function updateHeader(score, total) {
   if (pill) { pill.classList.remove('bump'); void pill.offsetWidth; pill.classList.add('bump') }
 }
 
-function renderQuestion(q, existing) {
+function renderQuestion(q, existing, correctAnswers) {
   const options = Array.isArray(q.options) ? q.options : JSON.parse(q.options || '[]')
   const answered = !!existing
   const content  = document.getElementById('content')
@@ -77,9 +90,7 @@ function renderQuestion(q, existing) {
     const btn = document.createElement('button')
     btn.className = 'opt-btn'
     if (answered) {
-      let correctOpts = []
-      try { const p = JSON.parse(q.answer); correctOpts = Array.isArray(p) ? p : [q.answer] }
-      catch { correctOpts = [q.answer] }
+      const correctOpts = correctAnswers || []
       if (correctOpts.includes(opt))             btn.classList.add('correct')
       else if (opt === existing.selected_option) btn.classList.add('wrong')
       btn.disabled = true
@@ -92,7 +103,7 @@ function renderQuestion(q, existing) {
   content.appendChild(grid)
 
   if (answered) {
-    content.appendChild(makeBanner(existing.is_correct, existing.points_earned, q.answer))
+    content.appendChild(makeBanner(existing.is_correct, existing.points_earned, (correctAnswers || []).join(', ')))
     content.appendChild(makeBackBtn())
   }
 }
@@ -101,57 +112,48 @@ async function submitAnswer(chosenIdx, options, q) {
   // Lock immediately
   document.querySelectorAll('.opt-btn').forEach(b => b.disabled = true)
 
-  // Dobbeltsjekk at quizen ikkje er pausa/avslutta (hindrar juks under pause)
-  const { data: sessNow } = await db.from('sessions')
-    .select('status,is_paused').eq('id', identity.sessionId).maybeSingle()
-  if (!sessNow || sessNow.status !== 'active') {
-    return showSessionOver()
-  }
-  if (sessNow.is_paused) {
-    return showPaused()
-  }
-
   const chosenText = options[chosenIdx]
-  // Handle both single answer (string) and multi-answer (JSON array)
-  let correctAnswers = []
-  try {
-    const parsed = JSON.parse(q.answer)
-    correctAnswers = Array.isArray(parsed) ? parsed : [q.answer]
-  } catch {
-    correctAnswers = [q.answer]
-  }
-  const isCorrect = correctAnswers.includes(chosenText)
-  const pts = isCorrect ? 1 : 0
 
-  // Highlight
+  // DB-trigger (fn_verify_session_answer) set is_correct + points_earned server-side,
+  // og blokkerer innsending om sesjonen er pausa/avslutta eller spelaren har forlate.
+  // .select() gir oss raden ETTER at triggeren har kjørt → serveren sin fasit-dom.
+  const { data: saved, error } = await db.from('session_answers').insert({
+    session_id:       identity.sessionId,
+    player_id:        identity.playerId,
+    question_id:      q.id,
+    selected_option:  chosenText,
+    response_time_ms: null
+  }).select('is_correct, points_earned').single()
+
+  if (error) {
+    const msg = error.message || ''
+    if (msg.includes('session_paused'))         return showPaused()
+    if (msg.includes('session_not_active'))     return showSessionOver()
+    if (msg.includes('player_not_in_session'))  return showNoSession()
+    if (msg.includes('duplicate') || error.code === '23505') {
+      return showError('Du har allereie svara på dette spørsmålet.')
+    }
+    console.error('Kunne ikkje lagre svar:', error)
+    return showError('Kunne ikkje lagre svaret. Prøv å skanne QR-koden på nytt.')
+  }
+
+  const isCorrect = !!saved?.is_correct
+  const pts = saved?.points_earned || 0
+
+  // No som svaret er lagra, kan vi hente fasit via RPC og markere alternativa
+  const correctAnswers = await fetchCorrectAnswers(q.id)
   document.querySelectorAll('.opt-btn').forEach((btn, i) => {
     if (correctAnswers.includes(options[i])) btn.classList.add('correct')
     else if (i === chosenIdx)                btn.classList.add('wrong')
   })
 
-  try {
-    // DB-trigger (fn_verify_session_answer) verifiserer is_correct og points_earned server-side.
-    // DB-trigger (fn_update_player_score) oppdaterer total_score og hunt_finished_at automatisk.
-    await db.from('session_answers').insert({
-      session_id:       identity.sessionId,
-      player_id:        identity.playerId,
-      question_id:      q.id,
-      selected_option:  chosenText,
-      is_correct:       isCorrect,   // overskriven av trigger, men nyttig for visning
-      points_earned:    pts,         // overskriven av trigger
-      response_time_ms: null
-    })
-
-    // Les oppdatert score frå DB (trigger har kjørt ferdig)
-    const { data: playerAfter } = await db.from('session_players')
-      .select('total_score').eq('id', identity.playerId).single()
-    updateHeader(playerAfter?.total_score || 0, null)
-  } catch (err) {
-    console.error('Kunne ikkje lagre svar:', err)
-  }
+  // Les oppdatert score frå DB (score-triggeren har kjørt ferdig)
+  const { data: playerAfter } = await db.from('session_players')
+    .select('total_score').eq('id', identity.playerId).single()
+  updateHeader(playerAfter?.total_score || 0, null)
 
   const content = document.getElementById('content')
-  content.appendChild(makeBanner(isCorrect, pts, q.answer))
+  content.appendChild(makeBanner(isCorrect, pts, correctAnswers.join(', ')))
   content.appendChild(makeBackBtn())
 }
 

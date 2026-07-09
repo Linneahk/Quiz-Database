@@ -49,7 +49,7 @@ async function init() {
     return
   }
 
-  const { data: quiz } = await db.from('quizzes').select('*').eq('id', quizId).single()
+  const { data: quiz } = await db.from('quizzes').select('id,name,color,category,scheduled_start,scheduled_end').eq('id', quizId).single()
   if (quiz) {
     currentQuiz = quiz
     document.getElementById('quizTitle').innerHTML = `<span>${esc(quiz.name)}</span>`
@@ -67,7 +67,7 @@ async function init() {
 
   const { data: qs } = await db
     .from('questions')
-    .select('*')
+    .select('id,major_id,question_text,options,answer,image_url,time_limit,points,order')
     .eq('major_id', quizId)
     .order('order', { ascending: true })
 

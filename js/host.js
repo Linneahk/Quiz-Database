@@ -28,7 +28,7 @@ async function init() {
   const { data: { user } } = await sb.auth.getUser()
   if (!user) { location.href = 'login.html'; return }
 
-  const { data: quiz, error: qe } = await sb.from('quizzes').select('*').eq('id', quizId).single()
+  const { data: quiz, error: qe } = await sb.from('quizzes').select('id,name,color,session_count').eq('id', quizId).single()
   if (qe || !quiz) { toast('Fann ikkje quizen'); return }
   quizName = quiz.name
 
@@ -40,7 +40,7 @@ async function init() {
   let existingSess = null
 
   if (urlSessionId) {
-    const { data } = await sb.from('sessions').select('*').eq('id', urlSessionId).single()
+    const { data } = await sb.from('sessions').select('id,join_code,status,started_at,is_paused,paused_at,total_paused_ms').eq('id', urlSessionId).single()
     existingSess = data
   }
   // Check localStorage for a session we created before
@@ -48,13 +48,13 @@ async function init() {
     const storedId = localStorage.getItem('host_session_' + quizId)
     if (storedId) {
       const { data } = await sb.from('sessions')
-        .select('*').eq('id', storedId).in('status', ['waiting', 'active']).maybeSingle()
+        .select('id,join_code,status,started_at,is_paused,paused_at,total_paused_ms').eq('id', storedId).in('status', ['waiting', 'active']).maybeSingle()
       existingSess = data
     }
   }
   if (existingSess) {
     sessionId = existingSess.id
-    const { data: ep } = await sb.from('session_players').select('*').eq('session_id', sessionId)
+    const { data: ep } = await sb.from('session_players').select('id,nickname,avatar_color,total_score,hunt_finished_at,is_active').eq('session_id', sessionId)
     players = ep || []
     showLobby(quiz, existingSess.join_code)
     setupRealtime()
@@ -135,7 +135,7 @@ function setupRealtime() {
     if (status === 'SUBSCRIBED') {
       el.textContent = '🟢 Realtime tilkobla'; el.style.color = 'var(--accent)'
       // Full re-fetch ved (re)tilkobling — initialiserer lokal state
-      const { data: fresh } = await sb.from('session_players').select('*').eq('session_id', sessionId).eq('is_active', true)
+      const { data: fresh } = await sb.from('session_players').select('id,nickname,avatar_color,total_score,hunt_finished_at,is_active').eq('session_id', sessionId).eq('is_active', true)
       if (fresh) { players = fresh; renderLobbyPlayers() }
     } else if (status === 'CHANNEL_ERROR') {
       el.textContent = '🔴 Realtime feil — prøv å laste sida på nytt'; el.style.color = 'var(--red)'; console.error(err)
