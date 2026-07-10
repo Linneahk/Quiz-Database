@@ -88,8 +88,18 @@ window.checkPin = async function () {
 window.joinGame = async function () {
   const nick = document.getElementById('nick-inp').value.trim()
   if (!nick) return toast('Skriv inn eit kallenamn')
-  const { data: p, error } = await sb.from('session_players').insert({ session_id: sessionId, nickname: nick, avatar_color: chosenColor }).select().single()
-  if (error) return toast('Kunne ikkje bli med: ' + error.message)
+  if (nick.length > 30) return toast('Kallenamnet er for langt (maks 30 teikn)')
+  if (/[<>"'`]/.test(nick)) return toast('Kallenamnet inneheld ugyldige teikn')
+  // Berre farge frå den godkjende lista — hindrar CSS/style-injeksjon
+  const color = COLORS.includes(chosenColor) ? chosenColor : COLORS[0]
+  const { data: p, error } = await sb.from('session_players').insert({ session_id: sessionId, nickname: nick, avatar_color: color }).select('id').single()
+  if (error) {
+    const m = error.message || ''
+    if (m.includes('session_full'))     return toast('Denne quizen er full (maks 100 elevar)')
+    if (m.includes('session_closed'))   return toast('Quizen er ikkje open for å bli med lenger')
+    if (m.includes('invalid_nickname')) return toast('Ugyldig kallenamn — prøv eit anna')
+    return toast('Kunne ikkje bli med: ' + m)
+  }
   playerId = p.id
   localStorage.setItem('quiz_identity', JSON.stringify({ sessionId, quizId, playerId, nickname: nick, totalQs }))
   document.getElementById('wait-nick').textContent = nick

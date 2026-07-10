@@ -143,11 +143,20 @@ function setupRealtime() {
   })
 }
 
+// ── XSS-vern: elevar vel kallenamn/farge sjølv, så alt må escapast før innsetting
+// i lærarens (autentiserte) side. Fargen valideras til gyldig hex.
+function esc(s) {
+  return String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')
+}
+function safeColor(c) {
+  return /^#[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?$/.test(c || '') ? c : '#4d9fff'
+}
+
 function renderLobbyPlayers() {
   const w = document.getElementById('pwrap')
   w.innerHTML = players.length === 0
     ? '<p style="color:var(--muted);font-size:.85rem;">Ventar på elevar…</p>'
-    : players.map(p => `<div class="pchip"><div class="pdot" style="background:${p.avatar_color}"></div>${p.nickname}</div>`).join('')
+    : players.map(p => `<div class="pchip"><div class="pdot" style="background:${safeColor(p.avatar_color)}"></div>${esc(p.nickname)}</div>`).join('')
   document.getElementById('pcnt').textContent = `${players.length} elev${players.length !== 1 ? 'ar' : ''} tilkobla`
 }
 
@@ -266,8 +275,8 @@ function renderLeaderboard() {
       return `
       <div class="lb-row ${RANK_CLS[i] || ''}">
         <span class="lb-rank">${MEDALS[i] || i + 1}</span>
-        <div class="lb-dot" style="background:${p.avatar_color}"></div>
-        <span class="lb-name">${p.nickname}</span>
+        <div class="lb-dot" style="background:${safeColor(p.avatar_color)}"></div>
+        <span class="lb-name">${esc(p.nickname)}</span>
         <span class="lb-progress">${answered}/${totalQs}</span>
         ${done ? `<span class="lb-done-badge">✓ Ferdig</span>` : ''}
         ${timeStr ? `<span class="lb-time">${timeStr}</span>` : ''}
@@ -322,8 +331,8 @@ async function showFinal() {
     return `
   <div class="final-row" style="animation-delay:${i * .08}s">
     <span class="lb-rank">${MEDALS[i] || i + 1}</span>
-    <div class="lb-dot" style="background:${p.avatar_color}"></div>
-    <span class="lb-name">${p.nickname}</span>
+    <div class="lb-dot" style="background:${safeColor(p.avatar_color)}"></div>
+    <span class="lb-name">${esc(p.nickname)}</span>
     <span class="lb-progress" style="font-size:.8rem;color:var(--muted)">${answered}/${totalQs} svar</span>
     <span class="lb-time" style="font-size:.8rem;color:var(--muted)">${timeStr}</span>
     <span class="lb-score">${p.total_score}</span>

@@ -227,6 +227,8 @@
     let scanDone = false
 
     // ── SHOW IDENTITY ──
+    const escHtml = s => String(s ?? '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;')
+    const safeColor = c => /^#[0-9A-Fa-f]{3}([0-9A-Fa-f]{3})?$/.test(c || '') ? c : '#c8f050'
     const identity = JSON.parse(localStorage.getItem('quiz_identity') || 'null')
     const identityArea = document.getElementById('identity-area')
     if (identity?.playerId) {
@@ -234,9 +236,9 @@
       db.from('session_players').select('total_score,avatar_color').eq('id', identity.playerId).single().then(({ data }) => {
         identityArea.innerHTML = `
           <div class="identity-chip">
-            <div class="id-dot" style="background:${data?.avatar_color || '#c8f050'}"></div>
-            <span class="id-name">${identity.nickname}</span>
-            <span class="id-score">⭐ ${data?.total_score || 0} poeng</span>
+            <div class="id-dot" style="background:${safeColor(data?.avatar_color)}"></div>
+            <span class="id-name">${escHtml(identity.nickname)}</span>
+            <span class="id-score">⭐ ${Number(data?.total_score) || 0} poeng</span>
           </div>`
       })
     } else {
