@@ -40,6 +40,7 @@ async function init() {
   const { data } = await db.auth.getSession()
   if (!data.session) { window.location.href = 'login.html'; return }
   currentUser = data.session.user
+  document.body.classList.add('app-ready')   // auth OK → vis sida
 
   document.getElementById('userEmail').textContent = currentUser.email.split('@')[0]
   document.getElementById('userInitial').textContent = currentUser.email[0].toUpperCase()

@@ -12,8 +12,14 @@
 
 <body>
 
+  <!-- BOOT LOADER (vises til JS har bestemt kva skjerm som skal opp — hindrar glimt av PIN/login) -->
+  <div id="boot-screen" class="screen">
+    <div class="logo">Stord Quiz</div>
+    <div class="pulse">⏳</div>
+  </div>
+
   <!-- PIN -->
-  <div id="pin-screen" class="screen">
+  <div id="pin-screen" class="screen hidden">
     <div class="logo">Stord Quiz</div>
     <h1>Bli med!</h1>
     <p class="sub">Skriv inn PIN-koden frå læraren</p>
@@ -98,7 +104,7 @@
     </div>
   </div>
 
-  <a href="login.html" class="tlink">Lærar? Logg inn →</a>
+  <a href="login.html" class="tlink hidden">Lærar? Logg inn →</a>
 
   <!-- LEAVE CONFIRM MODAL -->
   <div id="leave-modal" class="leave-overlay">

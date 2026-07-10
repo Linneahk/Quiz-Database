@@ -20,6 +20,7 @@ if (savedIdentity?.playerId) {
   restoreSession(savedIdentity)
 } else {
   buildColorPicker()
+  show('pin-screen')
 }
 
 function buildColorPicker() {
@@ -65,6 +66,9 @@ async function restoreSession(identity) {
 function show(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'))
   document.getElementById(id).classList.remove('hidden')
+  // Lærar-innloggingslenka skal berre visast på PIN-skjermen (unngå glimt under jakt/boot)
+  const tl = document.querySelector('.tlink')
+  if (tl) tl.classList.toggle('hidden', id !== 'pin-screen')
 }
 window.show = show
 

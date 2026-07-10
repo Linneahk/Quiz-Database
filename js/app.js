@@ -67,7 +67,9 @@ async function forgotPassword() {
 // ── Allereie innlogga? ──
 db.auth.getSession().then(({ data }) => {
   if (data.session) {
-    window.location.href = 'dashboard.html'
+    window.location.href = 'dashboard.html'   // allereie innlogga → hopp rett til dashboard (skjema aldri vist)
+  } else {
+    document.body.classList.add('app-ready')  // ikkje innlogga → vis login-skjemaet
   }
 })
 
