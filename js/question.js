@@ -10,7 +10,7 @@ const questionId = new URLSearchParams(location.search).get('id')
 
 async function init() {
   if (!questionId)                               return showError('Ingen spørsmål-ID. Skann QR-koden på nytt.')
-  if (!identity?.playerId || !identity?.sessionId) return showNoSession()
+  if (!identity?.playerId || !identity?.sessionId || !identity?.token) return showNoSession()
 
   // Sjekk at sesjonen framleis finst og er aktiv
   const { data: sess } = await db.from('sessions').select('status,is_paused').eq('id', identity.sessionId).maybeSingle()
@@ -35,24 +35,26 @@ async function init() {
   const { data: q, error } = await db.from('questions').select('id,major_id,question_text,options,image_url,time_limit').eq('id', questionId).single()
   if (error || !q) return showError('Fann ikkje spørsmålet. Er QR-koden riktig?')
 
-  const [existingRes, playerRes, allQsRes] = await Promise.all([
-    db.from('session_answers').select('id,selected_option,is_correct,points_earned')
-      .eq('player_id', identity.playerId).eq('question_id', questionId).maybeSingle(),
+  // Eigne svar via token-verifisert RPC (anon kan ikkje lese session_answers direkte)
+  const [myAnswersRes, playerRes, allQsRes] = await Promise.all([
+    db.rpc('get_my_answers', { p_player_id: identity.playerId, p_token: identity.token }),
     db.from('session_players').select('total_score').eq('id', identity.playerId).single(),
     db.from('questions').select('id').eq('major_id', identity.quizId)
   ])
 
   updateHeader(playerRes.data?.total_score || 0, allQsRes.data?.length || 0)
 
+  const existing = (myAnswersRes.data || []).find(a => a.question_id === questionId) || null
+
   // Allereie svara → hent fasit (RPC gir berre fasit ETTER innsendt svar)
   let correctAnswers = null
-  if (existingRes.data) correctAnswers = await fetchCorrectAnswers(q.id)
-  renderQuestion(q, existingRes.data, correctAnswers)
+  if (existing) correctAnswers = await fetchCorrectAnswers(q.id)
+  renderQuestion(q, existing, correctAnswers)
 }
 
 // Hentar fasit via SECURITY DEFINER-RPC — fungerer berre om spelaren har svara
 async function fetchCorrectAnswers(qid) {
-  const { data } = await db.rpc('get_question_answer', { p_question_id: qid, p_player_id: identity.playerId })
+  const { data } = await db.rpc('get_question_answer', { p_question_id: qid, p_player_id: identity.playerId, p_token: identity.token })
   if (!data) return []
   try { const p = JSON.parse(data); return Array.isArray(p) ? p : [data] }
   catch { return [data] }
@@ -114,22 +116,21 @@ async function submitAnswer(chosenIdx, options, q) {
 
   const chosenText = options[chosenIdx]
 
-  // DB-trigger (fn_verify_session_answer) set is_correct + points_earned server-side,
-  // og blokkerer innsending om sesjonen er pausa/avslutta eller spelaren har forlate.
-  // .select() gir oss raden ETTER at triggeren har kjørt → serveren sin fasit-dom.
-  const { data: saved, error } = await db.from('session_answers').insert({
-    session_id:       identity.sessionId,
-    player_id:        identity.playerId,
-    question_id:      q.id,
-    selected_option:  chosenText,
-    response_time_ms: null
-  }).select('is_correct, points_earned').single()
+  // Innsending via token-verifisert RPC. DB-triggeren (fn_verify_session_answer) set
+  // is_correct + points_earned server-side og blokkerer pausa/avslutta/forlatne sesjonar.
+  const { data: saved, error } = await db.rpc('submit_answer', {
+    p_player_id:       identity.playerId,
+    p_token:           identity.token,
+    p_question_id:     q.id,
+    p_selected_option: chosenText
+  })
 
   if (error) {
     const msg = error.message || ''
     if (msg.includes('session_paused'))         return showPaused()
     if (msg.includes('session_not_active'))     return showSessionOver()
-    if (msg.includes('player_not_in_session'))  return showNoSession()
+    if (msg.includes('player_not_in_session') || msg.includes('invalid_token')) return showNoSession()
+    if (msg.includes('question_not_in_quiz'))   return showError('Denne QR-koden høyrer ikkje til quizen du er med i.')
     if (msg.includes('duplicate') || error.code === '23505') {
       return showError('Du har allereie svara på dette spørsmålet.')
     }

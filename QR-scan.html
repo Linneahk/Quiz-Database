@@ -292,13 +292,10 @@
         return
       }
 
-      // Check already answered
-      const { data: existing } = await db
-        .from('session_answers')
-        .select('id, is_correct')
-        .eq('player_id', identity.playerId)
-        .eq('question_id', questionId)
-        .maybeSingle()
+      // Check already answered (via token-verifisert RPC — anon kan ikkje lese session_answers direkte)
+      const { data: myAnswers } = await db
+        .rpc('get_my_answers', { p_player_id: identity.playerId, p_token: identity.token })
+      const existing = (myAnswers || []).find(a => a.question_id === questionId) || null
 
       if (existing) {
         clearStatus()

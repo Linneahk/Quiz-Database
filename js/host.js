@@ -54,7 +54,7 @@ async function init() {
   }
   if (existingSess) {
     sessionId = existingSess.id
-    const { data: ep } = await sb.from('session_players').select('id,nickname,avatar_color,total_score,hunt_finished_at,is_active').eq('session_id', sessionId)
+    const { data: ep } = await sb.from('session_players').select('id,nickname,avatar_color,total_score,hunt_finished_at,is_active').eq('session_id', sessionId).eq('is_active', true)
     players = ep || []
     showLobby(quiz, existingSess.join_code)
     setupRealtime()
@@ -74,16 +74,22 @@ async function init() {
     return
   }
 
-  // No existing session — create new
-  const pin = String(Math.floor(100000 + Math.random() * 900000))
-  const { data: sess, error: se } = await sb.from('sessions').insert({
-    quiz_id: quizId, join_code: pin, status: 'waiting', host_id: user.id
-  }).select().single()
-  if (se) { toast('Kunne ikkje opprette økt: ' + se.message); console.error(se); return }
+  // No existing session — create new (retry på PIN-kollisjon med andre opne økter)
+  let sess = null, se = null
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const pin = String(Math.floor(100000 + Math.random() * 900000))
+    const res = await sb.from('sessions').insert({
+      quiz_id: quizId, join_code: pin, status: 'waiting', host_id: user.id
+    }).select().single()
+    if (!res.error) { sess = res.data; break }
+    se = res.error
+    if (res.error.code !== '23505') break // berre retry på unique-kollisjon
+  }
+  if (!sess) { toast('Kunne ikkje opprette økt: ' + (se?.message || 'ukjend feil')); console.error(se); return }
   sessionId = sess.id
   localStorage.setItem('host_session_' + quizId, sess.id)
   await sb.from('quizzes').update({ session_count: (quiz.session_count || 0) + 1 }).eq('id', quizId)
-  showLobby(quiz, pin)
+  showLobby(quiz, sess.join_code)
   setupRealtime()
 }
 
